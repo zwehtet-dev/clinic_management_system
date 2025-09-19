@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Doctor extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'public_id',
+        'name',
+        'specialization',
+        'license_number',
+        'phone',
+        'is_active'
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    public function visits()
+    {
+        return $this->hasMany(Visit::class);
+    }
+
+    public function referrals()
+    {
+        return $this->hasMany(DoctorReferral::class);
+    }
+}
