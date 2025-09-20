@@ -18,6 +18,7 @@ use App\Filament\Resources\Patients\Pages\CreatePatient;
 use App\Filament\Resources\Patients\Schemas\PatientForm;
 use App\Filament\Resources\Patients\Tables\PatientsTable;
 use App\Filament\Resources\Patients\Schemas\PatientInfolist;
+use App\Filament\Resources\Patients\RelationManagers;
 
 class PatientResource extends Resource
 {
@@ -75,7 +76,7 @@ class PatientResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\VisitsRelationManager::class,
         ];
     }
 

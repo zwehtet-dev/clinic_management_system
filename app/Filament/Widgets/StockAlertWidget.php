@@ -29,14 +29,11 @@ class StockAlertWidget extends TableWidget
         return $table
             ->query(fn (): Builder => Drug::query()
                 ->where('is_active', true)
-                ->where(function ($query) {
-                    $query->whereRaw('(SELECT SUM(quantity_available)
-                                        FROM drug_batches
-                                        WHERE drug_batches.drug_id = drugs.id
-                                        AND quantity_available > 0
-                                        AND expiry_date > NOW()
-                                    ) <= min_stock');
+                ->whereHas('batches', function ($batchQuery) {
+                    $batchQuery->where('quantity_available', '>', 0)
+                              ->where('expiry_date', '>', now());
                 })
+                ->whereRaw('(SELECT COALESCE(SUM(quantity_available), 0) FROM drug_batches WHERE drug_batches.drug_id = drugs.id AND quantity_available > 0 AND expiry_date > ?) <= min_stock', [now()])
                 ->withSum(['batches as total_stock' => function ($query) {
                     $query->where('quantity_available', '>', 0)
                         ->where('expiry_date', '>', now());

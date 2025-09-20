@@ -17,6 +17,7 @@ use App\Filament\Resources\Doctors\Pages\CreateDoctor;
 use App\Filament\Resources\Doctors\Schemas\DoctorForm;
 use App\Filament\Resources\Doctors\Tables\DoctorsTable;
 use App\Filament\Resources\Doctors\Schemas\DoctorInfolist;
+use App\Filament\Resources\Doctors\RelationManagers;
 use UnitEnum;
 
 class DoctorResource extends Resource

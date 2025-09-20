@@ -107,18 +107,18 @@ class DrugsTable
                 Filter::make('low_stock')
                     ->label('Low Stock Alert')
                     ->query(fn (Builder $query): Builder => $query->where('is_active', true)
-                        ->where(function ($query) {
-                            $query->whereRaw('(SELECT SUM(quantity_available)
-                                                FROM drug_batches
-                                                WHERE drug_batches.drug_id = drugs.id
-                                                AND quantity_available > 0
-                                                AND expiry_date > NOW()
-                                            ) <= min_stock');
+                        ->whereHas('batches', function ($batchQuery) {
+                            $batchQuery->where('quantity_available', '>', 0)
+                                      ->where('expiry_date', '>', now());
                         })
+                        ->whereRaw('(SELECT COALESCE(SUM(quantity_available), 0) FROM drug_batches WHERE drug_batches.drug_id = drugs.id AND quantity_available > 0 AND expiry_date > ?) <= min_stock', [now()])
                     ),
                 Filter::make('out_of_stock')
                     ->label('Out of Stock')
-                    ->query(fn (Builder $query): Builder => $query->where('stock', '0')),
+                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('batches', function ($batchQuery) {
+                        $batchQuery->where('quantity_available', '>', 0)
+                                  ->where('expiry_date', '>', now());
+                    })),
                 TernaryFilter::make('is_active')
                     ->label('Status')
                     ->placeholder('All drugs')

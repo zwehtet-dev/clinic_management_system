@@ -9,6 +9,7 @@ use App\Filament\Resources\Drugs\Pages\ViewDrug;
 use App\Filament\Resources\Drugs\Schemas\DrugForm;
 use App\Filament\Resources\Drugs\Schemas\DrugInfolist;
 use App\Filament\Resources\Drugs\Tables\DrugsTable;
+use App\Filament\Resources\Drugs\RelationManagers;
 use App\Models\Drug;
 use BackedEnum;
 use UnitEnum;

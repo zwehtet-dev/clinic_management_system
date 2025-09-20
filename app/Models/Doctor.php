@@ -15,6 +15,8 @@ class Doctor extends Model
         'specialization',
         'license_number',
         'phone',
+        'address',
+        'notes',
         'is_active'
     ];
 

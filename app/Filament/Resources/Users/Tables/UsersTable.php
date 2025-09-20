@@ -8,7 +8,9 @@ use Filament\Actions\ViewAction;
 use Illuminate\Support\Facades\Auth;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 
 class UsersTable
 {
@@ -17,12 +19,16 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('email')
                     ->label('Email address')
-                    ->searchable(),
-                TextColumn::make('role')
-                    ->badge(),
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->copyable(),
+                IconColumn::make('is_active')
+                    ->label('Active'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -33,7 +39,11 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                TernaryFilter::make('is_active')
+                    ->label('Status')
+                    ->placeholder('All users')
+                    ->trueLabel('Active users')
+                    ->falseLabel('Inactive users'),
             ])
             ->recordActions([
                 ViewAction::make(),

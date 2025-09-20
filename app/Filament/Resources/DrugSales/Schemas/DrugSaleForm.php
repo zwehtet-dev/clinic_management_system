@@ -135,7 +135,7 @@ class DrugSaleForm
                                 Select::make('invoice.invoice_items.itemable_id')
                                     ->label('Batch')
                                     ->options(function (Get $get) {
-                                        return $get('invoice.invoice_items.itemable_id_options') ?? [];
+                                        return $get('invoice.invoice_items.itemable_id_options') ?? DrugBatch::where('expiry_date','>',now())->where('quantity_available','>',0)->get();
                                     })
                                     ->required()
                                     ->searchable()
@@ -163,7 +163,28 @@ class DrugSaleForm
                                         $unitPrice = floatval($get('unit_price') ?? 0);
                                         $quantity = floatval($state ?? 0);
                                         $set('line_total', $unitPrice * $quantity);
+                                    })
+                                    ->maxValue(function(Get $get){
+                                        $batchId = $get('invoice.invoice_items.itemable_id');
+                                        if ($batchId) {
+                                            $batch = DrugBatch::find($batchId);
+                                            return $batch ? $batch->quantity_available : 1;
+                                        }
+                                        return 1;
+                                    })
+                                    ->helperText(function(Get $get){
+                                        $batchId = $get('invoice.invoice_items.itemable_id');
+                                        if ($batchId) {
+                                            $batch = DrugBatch::find($batchId);
+                                            return $batch ? "Available stock: {$batch->quantity_available}" : '';
+                                        }
+                                        return '';
+                                    })
+                                    ->helperText(function(Get $get){
+                                        $batch = DrugBatch::find($get('invoice.invoice_items.itemable_id'));
+                                        return "Available stock: {$batch->quantity_available}";
                                     }),
+
 
 
 

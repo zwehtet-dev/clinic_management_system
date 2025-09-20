@@ -78,12 +78,21 @@ class StatsOverview extends StatsOverviewWidget
 
 
 
-        // Stock alerts
-        $allDrugs = Drug::where('is_active', true)->with('batches')->get();
+        // Stock alerts - optimized query
+        $lowStockCount = Drug::where('is_active', true)
+            ->whereHas('batches', function ($query) {
+                $query->where('quantity_available', '>', 0)
+                      ->where('expiry_date', '>', now());
+            })
+            ->whereRaw('(SELECT COALESCE(SUM(quantity_available), 0) FROM drug_batches WHERE drug_batches.drug_id = drugs.id AND quantity_available > 0 AND expiry_date > ?) <= min_stock', [now()])
+            ->count();
 
-        $lowStockCount = $allDrugs->filter(fn($drug) => $drug->total_stock <= $drug->min_stock)->count();
-
-        $outOfStockCount = $allDrugs->filter(fn($drug) => $drug->total_stock <= 0)->count();
+        $outOfStockCount = Drug::where('is_active', true)
+            ->whereDoesntHave('batches', function ($query) {
+                $query->where('quantity_available', '>', 0)
+                      ->where('expiry_date', '>', now());
+            })
+            ->count();
 
 
         return [

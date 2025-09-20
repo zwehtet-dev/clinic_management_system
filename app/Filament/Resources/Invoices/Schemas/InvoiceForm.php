@@ -152,7 +152,7 @@ class InvoiceForm
                                 Select::make('invoice_items.itemable_id')
                                     ->label('Batch')
                                     ->options(function (Get $get) {
-                                        return $get('invoice_items.itemable_id_options') ?? [];
+                                        return $get('invoice_items.itemable_id_options') ?? DrugBatch::where('expiry_date','>',now())->where('quantity_available','>',0)->get();
                                     })
                                     ->required()
                                     ->searchable()
@@ -180,6 +180,14 @@ class InvoiceForm
                                         $unitPrice = floatval($get('unit_price') ?? 0);
                                         $quantity = floatval($state ?? 0);
                                         $set('line_total', $unitPrice * $quantity);
+                                    })
+                                    ->maxValue(function(Get $get){
+                                        $batch = DrugBatch::find($get('invoice_items.itemable_id'));
+                                        return $batch->quantity_available;
+                                    })
+                                    ->helperText(function(Get $get){
+                                        $batch = DrugBatch::find($get('invoice_items.itemable_id'));
+                                        return "Available stock: {$batch->quantity_available}";
                                     }),
 
 

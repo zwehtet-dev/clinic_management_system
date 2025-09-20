@@ -9,6 +9,7 @@ use App\Filament\Resources\DrugSales\Pages\ViewDrugSale;
 use App\Filament\Resources\DrugSales\Schemas\DrugSaleForm;
 use App\Filament\Resources\DrugSales\Schemas\DrugSaleInfolist;
 use App\Filament\Resources\DrugSales\Tables\DrugSalesTable;
+use App\Filament\Resources\DrugSales\RelationManagers;
 use App\Models\DrugSale;
 use BackedEnum;
 use Filament\Resources\Resource;

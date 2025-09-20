@@ -22,42 +22,70 @@ class CreateVisit extends CreateRecord
     {
         // Extract invoice data
         $createInvoice = $data['create_invoice'] ?? false;
-        $invoiceItems = $data['invoice_items'] ?? [];
-        $invoiceNotes = $data['invoice_notes'] ?? '';
+        $invoiceData = $data['invoice'] ?? [];
+        $invoiceItems = $invoiceData['invoice_items'] ?? [];
+        $invoiceNotes = $invoiceData['notes'] ?? '';
 
         // Remove invoice fields from visit data
-        unset($data['create_invoice'], $data['invoice_items'], $data['invoice_notes']);
+        unset($data['create_invoice'], $data['invoice'], $data['selected_services']);
 
         // Generate public ID for visit
         $data['public_id'] = Visit::generatePublicId();
 
-        // Create the visit
-        $visit = static::getModel()::create($data);
-
-
-        // Create doctor referral
-        DoctorReferral::create([
-            'doctor_id' => $visit->doctor->id,
-            'visit_id' => $visit->id,
-            'referral_fee' => $visit->consultation_fee,
-            'status' => 'unpaid'
-        ]);
-
-        // Create invoice if requested
+        // Validate stock before creating visit
         if ($createInvoice && !empty($invoiceItems)) {
-            $this->createInvoiceForVisit($visit, $invoiceItems, $invoiceNotes);
+            $this->validateStockAvailability($invoiceItems);
         }
 
-        return $visit;
+        // Use database transaction for data integrity
+        return \DB::transaction(function () use ($data, $createInvoice, $invoiceItems, $invoiceNotes) {
+            // Create the visit
+            $visit = static::getModel()::create($data);
+
+            // Create doctor referral
+            DoctorReferral::create([
+                'doctor_id' => $visit->doctor->id,
+                'visit_id' => $visit->id,
+                'referral_fee' => $visit->consultation_fee,
+                'status' => 'unpaid'
+            ]);
+
+            // Create invoice if requested
+            if ($createInvoice && !empty($invoiceItems)) {
+                $this->createInvoiceForVisit($visit, $invoiceItems, $invoiceNotes);
+            }
+
+            return $visit;
+        });
     }
 
-     protected function createInvoiceForVisit(Visit $visit, array $invoiceItems, string $invoiceNotes = ''): void
+    protected function validateStockAvailability(array $invoiceItems): void
     {
+        foreach ($invoiceItems as $item) {
+            if (isset($item['itemable_type']) && $item['itemable_type'] === \App\Models\DrugBatch::class) {
+                $batch = \App\Models\DrugBatch::find($item['itemable_id']);
+                if (!$batch) {
+                    throw new \Exception("Drug batch not found.");
+                }
+                
+                if ($batch->quantity_available < ($item['quantity'] ?? 1)) {
+                    throw new \Exception("Insufficient stock for {$batch->drug->name}. Available: {$batch->quantity_available}, Requested: {$item['quantity']}");
+                }
+                
+                if ($batch->expiry_date <= now()) {
+                    throw new \Exception("Drug batch {$batch->batch_number} has expired.");
+                }
+            }
+        }
+    }
 
+    protected function createInvoiceForVisit(Visit $visit, array $invoiceItems, string $invoiceNotes = ''): void
+    {
         $invoiceNumber = Invoice::generateInvoiceNumber();
 
-        // Calculate total amount
-        $totalAmount = collect($invoiceItems)->sum('line_total');
+        // Calculate total amount including consultation fee
+        $itemsTotal = collect($invoiceItems)->sum('line_total');
+        $totalAmount = $itemsTotal + $visit->consultation_fee;
 
         // Create invoice
         $invoice = Invoice::create([
@@ -72,31 +100,25 @@ class CreateVisit extends CreateRecord
 
         // Create invoice items
         foreach ($invoiceItems as $item) {
-            if (empty($item['type']) || empty($item['item_id'])) {
+            if (empty($item['itemable_type']) || empty($item['itemable_id'])) {
                 continue;
             }
-
-            // Determine itemable type and id
-            $itemableType = $item['type'] === 'service' ? Service::class : Drug::class;
-            $itemableId = $item['item_id'];
 
             // Create invoice item
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
-                'itemable_type' => $itemableType,
-                'itemable_id' => $itemableId,
+                'itemable_type' => $item['itemable_type'],
+                'itemable_id' => $item['itemable_id'],
                 'quantity' => $item['quantity'] ?? 1,
                 'unit_price' => $item['unit_price'] ?? 0,
                 'line_total' => $item['line_total'] ?? 0,
             ]);
 
-            // If it's a drug, reduce stock
-            if ($itemableType === Drug::class) {
-                $drug = Drug::find($itemableId);
-                if ($drug) {
-                    $currentStock = (int) $drug->stock;
-                    $newStock = max(0, $currentStock - ($item['quantity'] ?? 1));
-                    $drug->update(['stock' => $newStock]);
+            // If it's a drug batch, reduce stock
+            if ($item['itemable_type'] === \App\Models\DrugBatch::class) {
+                $batch = \App\Models\DrugBatch::find($item['itemable_id']);
+                if ($batch && !$batch->reduceStock($item['quantity'] ?? 1)) {
+                    throw new \Exception("Failed to reduce stock for {$batch->drug->name}");
                 }
             }
         }
@@ -116,14 +138,20 @@ class CreateVisit extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // Pre-fill patient_id if passed from URL
+        // Pre-fill patient_id if passed from URL (with validation)
         if (request()->has('patient_id')) {
-            $data['patient_id'] = request()->get('patient_id');
+            $patientId = request()->integer('patient_id');
+            if ($patientId > 0 && \App\Models\Patient::where('id', $patientId)->exists()) {
+                $data['patient_id'] = $patientId;
+            }
         }
 
-        // Pre-fill doctor_id if passed from URL
+        // Pre-fill doctor_id if passed from URL (with validation)
         if (request()->has('doctor_id')) {
-            $data['doctor_id'] = request()->get('doctor_id');
+            $doctorId = request()->integer('doctor_id');
+            if ($doctorId > 0 && \App\Models\Doctor::where('id', $doctorId)->exists()) {
+                $data['doctor_id'] = $doctorId;
+            }
         }
 
         return $data;
