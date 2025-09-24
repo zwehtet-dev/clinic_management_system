@@ -6,6 +6,7 @@ use App\Filament\Resources\ExpenseCategories\Pages\CreateExpenseCategory;
 use App\Filament\Resources\ExpenseCategories\Pages\EditExpenseCategory;
 use App\Filament\Resources\ExpenseCategories\Pages\ListExpenseCategories;
 use App\Filament\Resources\ExpenseCategories\Pages\ViewExpenseCategory;
+use App\Filament\Resources\ExpenseCategories\RelationManagers\ExpensesRelationManager;
 use App\Filament\Resources\ExpenseCategories\Schemas\ExpenseCategoryForm;
 use App\Filament\Resources\ExpenseCategories\Schemas\ExpenseCategoryInfolist;
 use App\Filament\Resources\ExpenseCategories\Tables\ExpenseCategoriesTable;
@@ -49,7 +50,7 @@ class ExpenseCategoryResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ExpensesRelationManager::class
         ];
     }
 

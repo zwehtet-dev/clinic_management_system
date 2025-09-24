@@ -43,7 +43,7 @@ class ExpenseCategoryInfolist
                             ->label('Created')
                             ->dateTime(),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 Section::make('Description')
                     ->schema([

@@ -10,6 +10,7 @@ use App\Filament\Resources\Drugs\Schemas\DrugForm;
 use App\Filament\Resources\Drugs\Schemas\DrugInfolist;
 use App\Filament\Resources\Drugs\Tables\DrugsTable;
 use App\Filament\Resources\Drugs\RelationManagers;
+use App\Filament\Resources\Drugs\RelationManagers\BatchesRelationManager;
 use App\Models\Drug;
 use BackedEnum;
 use UnitEnum;
@@ -80,7 +81,7 @@ class DrugResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            BatchesRelationManager::class
         ];
     }
 

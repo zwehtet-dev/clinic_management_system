@@ -10,6 +10,7 @@ use App\Filament\Resources\DrugSales\Schemas\DrugSaleForm;
 use App\Filament\Resources\DrugSales\Schemas\DrugSaleInfolist;
 use App\Filament\Resources\DrugSales\Tables\DrugSalesTable;
 use App\Filament\Resources\DrugSales\RelationManagers;
+use App\Filament\Resources\DrugSales\RelationManagers\InvoiceRelationManager;
 use App\Models\DrugSale;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -64,7 +65,7 @@ class DrugSaleResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            InvoiceRelationManager::class
         ];
     }
 

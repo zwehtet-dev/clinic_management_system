@@ -50,7 +50,7 @@ class VisitInfolist
                             ->label('Created')
                             ->dateTime(),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 Section::make('Medical Details')
                     ->schema([

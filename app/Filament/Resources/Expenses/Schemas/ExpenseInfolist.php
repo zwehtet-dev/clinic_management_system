@@ -17,7 +17,8 @@ class ExpenseInfolist
                     ->schema([
                         TextEntry::make('name')
                             ->label('Name')
-                            ->weight('bold'),
+                            ->weight('bold')
+                            ->columnSpanFull(),
 
                         TextEntry::make('expenseCategory.name')
                             ->label('Category')
@@ -38,7 +39,7 @@ class ExpenseInfolist
                             ->label('Created')
                             ->dateTime(),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 Section::make('Notes')
                     ->schema([

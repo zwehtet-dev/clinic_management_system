@@ -18,24 +18,10 @@ class ListDailyReports extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            // CreateAction::make(),
-            Action::make('generate_today')
-                ->label('Generate Today\'s Report')
-                ->icon('heroicon-o-plus-circle')
-                ->color('success')
-                ->action(function () {
-                    DailyReport::generateReport(Carbon::today());
-
-                    Notification::make()
-                        ->title('Today\'s Report Generated')
-                        ->success()
-                        ->send();
-                }),
-
             Action::make('generate_range')
                 ->label('Generate Date Range')
                 ->icon('heroicon-o-calendar')
-                ->color('info')
+                ->color('gray')
                 ->form([
                     DatePicker::make('start_date')
                         ->label('Start Date')
@@ -54,6 +40,21 @@ class ListDailyReports extends ListRecords
                         ->body('Reports generated for selected date range')
                         ->send();
                 }),
+            // CreateAction::make(),
+            Action::make('generate_today')
+                ->label('Generate Today\'s Report')
+                ->icon('heroicon-o-plus-circle')
+                ->color('primary')
+                ->action(function () {
+                    DailyReport::generateReport(Carbon::today());
+
+                    Notification::make()
+                        ->title('Today\'s Report Generated')
+                        ->success()
+                        ->send();
+                }),
+
+
 
         ];
     }

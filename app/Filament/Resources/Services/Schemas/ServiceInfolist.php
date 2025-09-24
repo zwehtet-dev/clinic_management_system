@@ -21,7 +21,7 @@ class ServiceInfolist
                             ->weight('bold'),
 
                         TextEntry::make('price')
-                            ->money('USD')
+                            ->suffix(' Ks')
                             ->size('lg')
                             ->weight('bold')
                             ->color('success'),
@@ -35,7 +35,7 @@ class ServiceInfolist
                             ->label('Created')
                             ->dateTime(),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 Section::make('Description')
                     ->schema([

@@ -31,6 +31,14 @@ class PatientInfolist
                         TextEntry::make('phone')
                             ->icon('heroicon-o-phone')
                             ->placeholder('-'),
+                        IconEntry::make('is_active')
+                            ->boolean()
+                            ->color(fn (bool $state): string => $state ? 'success' : 'danger')
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Active' : 'Inactive'),
+                    ])
+                    ->columns(2),
+                Section::make('Additional Information')
+                    ->schema([
                         TextEntry::make('address')
                             ->icon('heroicon-o-map-pin')
                             ->placeholder('-')
@@ -38,16 +46,12 @@ class PatientInfolist
                         TextEntry::make('notes')
                             ->placeholder('-')
                             ->columnSpanFull(),
-                        IconEntry::make('is_active')
-                            ->boolean()
-                            ->color(fn (bool $state): string => $state ? 'success' : 'danger')
-                            ->formatStateUsing(fn (bool $state): string => $state ? 'Active' : 'Inactive'),
+
                         TextEntry::make('created_at')
                             ->label('Registered On')
                             ->dateTime()
                             ->placeholder('-'),
                     ])
-                    ->columns(3),
             ]);
     }
 }

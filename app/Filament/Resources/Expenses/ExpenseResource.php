@@ -39,8 +39,8 @@ class ExpenseResource extends Resource
     {
         return [
             'Category' => $record->expenseCategory->name,
-            'Amount' => '$' . number_format($record->amount, 2),
-            'Date' => $record->expense_date->format('M d, Y'),
+            'Amount' => number_format($record->amount, 2) . ' Ks',
+            'Date' => $record->expense_date ?? '-'
         ];
     }
 

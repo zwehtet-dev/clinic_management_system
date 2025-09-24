@@ -6,6 +6,7 @@ use App\Filament\Resources\Visits\Pages\CreateVisit;
 use App\Filament\Resources\Visits\Pages\EditVisit;
 use App\Filament\Resources\Visits\Pages\ListVisits;
 use App\Filament\Resources\Visits\Pages\ViewVisit;
+use App\Filament\Resources\Visits\RelationManagers\InvoiceRelationManager;
 use App\Filament\Resources\Visits\Schemas\VisitForm;
 use App\Filament\Resources\Visits\Schemas\VisitInfolist;
 use App\Filament\Resources\Visits\Tables\VisitsTable;
@@ -62,7 +63,7 @@ class VisitResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            InvoiceRelationManager::class,
         ];
     }
 

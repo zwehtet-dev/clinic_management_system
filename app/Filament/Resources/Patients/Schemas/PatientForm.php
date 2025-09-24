@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -38,21 +39,24 @@ class PatientForm
                         TextInput::make('phone')
                             ->default(null)
                             ->maxLength(11),
-                        Textarea::make('address')
-                            ->default(null)
-                            ->columnSpanFull()
-                            ->rows(3),
-                        Textarea::make('notes')
-                            ->default(null)
-                            ->rows(3)
-                            ->placeholder('Medical history, allergies, special notes...')
+                        Group::make()
+                            ->schema([
+                                Textarea::make('address')
+                                    ->default(null)
+                                    ->rows(3),
+                                Textarea::make('notes')
+                                    ->default(null)
+                                    ->rows(3)
+                                    ->placeholder('Medical history, allergies, special notes...')
+                            ])
+                            ->columns(2)
                             ->columnSpanFull(),
                         Toggle::make('is_active')
                             ->label('Active')
                             ->required()
                             ->default(true),
                     ])
-                    ->columns(2)
+                    ->columns(3)
                     ->columnSpanFull(),
             ]);
     }

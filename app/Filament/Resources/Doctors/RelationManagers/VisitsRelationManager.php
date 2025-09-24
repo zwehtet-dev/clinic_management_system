@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Patients\RelationManagers;
+namespace App\Filament\Resources\Doctors\RelationManagers;
 
 use App\Filament\Resources\Visits\VisitResource;
 use Filament\Actions\CreateAction;
@@ -17,12 +17,7 @@ class VisitsRelationManager extends RelationManager
     {
         return $table
             ->headerActions([
-                CreateAction::make()
-                    ->mutateFormDataUsing(function (array $data) {
-                        // Automatically attach patient_id
-                        $data['patient_id'] = [$this->ownerRecord->id => "{$this->ownerRecord->public_id} - {$this->ownerRecord->name}" ];
-                        return $data;
-                    }),
+                CreateAction::make(),
             ]);
     }
 }

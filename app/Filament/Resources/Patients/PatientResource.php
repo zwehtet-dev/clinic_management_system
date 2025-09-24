@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Patients;
 
-use BackedEnum;
 use UnitEnum;
+use BackedEnum;
 use App\Models\Patient;
 use Filament\Tables\Table;
 use Filament\Schemas\Schema;
@@ -11,14 +11,16 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
+use App\Filament\Resources\Patients\RelationManagers;
 use App\Filament\Resources\Patients\Pages\EditPatient;
 use App\Filament\Resources\Patients\Pages\ViewPatient;
 use App\Filament\Resources\Patients\Pages\ListPatients;
 use App\Filament\Resources\Patients\Pages\CreatePatient;
+use App\Filament\Resources\Patients\RelationManagers\DrugsalesRelationManager;
 use App\Filament\Resources\Patients\Schemas\PatientForm;
 use App\Filament\Resources\Patients\Tables\PatientsTable;
 use App\Filament\Resources\Patients\Schemas\PatientInfolist;
-use App\Filament\Resources\Patients\RelationManagers;
+use App\Filament\Resources\Patients\RelationManagers\VisitsRelationManager;
 
 class PatientResource extends Resource
 {
@@ -76,7 +78,8 @@ class PatientResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\VisitsRelationManager::class,
+            VisitsRelationManager::class,
+            DrugsalesRelationManager::class,
         ];
     }
 

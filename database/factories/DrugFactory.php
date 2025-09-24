@@ -14,14 +14,14 @@ class DrugFactory extends Factory
     {
         return [
             'name' => $this->faker->words(2, true) . ' ' . $this->faker->randomElement(['500mg', '250mg', '100mg']),
-            'catelog' => $this->faker->optional()->word(),
+            'catelog' => $this->faker->optional()->word,
             'generic_name' => $this->faker->words(2, true),
             'drug_form_id' => DrugForm::factory(),
             'strength' => $this->faker->randomElement(['500mg', '250mg', '100mg', '50mg']),
             'unit' => $this->faker->randomElement(['tablet', 'capsule', 'ml', 'mg']),
             'min_stock' => $this->faker->numberBetween(10, 100),
             'expire_alert' => $this->faker->numberBetween(30, 90),
-            'description' => $this->faker->optional()->sentence(),
+            'description' => $this->faker->optional()->sentence,
             'is_active' => true,
         ];
     }

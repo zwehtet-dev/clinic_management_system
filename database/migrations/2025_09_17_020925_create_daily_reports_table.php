@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::create('daily_reports', function (Blueprint $table) {
             $table->id();
-            $table->date('report_date')->unique(); // one report per day
+            $table->date('report_date'); // one report per day
 
             // Patient statistics
             $table->unsignedInteger('new_patients')->default(0);

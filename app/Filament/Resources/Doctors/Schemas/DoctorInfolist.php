@@ -7,6 +7,7 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Group;
 
 class DoctorInfolist
 {
@@ -56,9 +57,10 @@ class DoctorInfolist
                             ->badge()
                             ->color('success'),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
-                Section::make('Contact Information')
+                Group::make([
+                    Section::make('Contact Information')
                     ->schema([
                         TextEntry::make('address')
                             ->icon('heroicon-o-map-pin')
@@ -66,13 +68,14 @@ class DoctorInfolist
                     ])
                     ->visible(fn (Doctor $record): bool => !empty($record->address)),
 
-                Section::make('Notes')
-                    ->schema([
-                        TextEntry::make('notes')
-                            ->markdown()
-                            ->columnSpanFull(),
-                    ])
-                    ->visible(fn (Doctor $record): bool => !empty($record->notes)),
+                    Section::make('Notes')
+                        ->schema([
+                            TextEntry::make('notes')
+                                ->markdown()
+                                ->columnSpanFull(),
+                        ])
+                        ->visible(fn (Doctor $record): bool => !empty($record->notes)),
+                ])
             ]);
     }
 }

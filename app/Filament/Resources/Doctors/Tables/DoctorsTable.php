@@ -92,16 +92,17 @@ class DoctorsTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                Action::make('new_visit')
-                    ->label('New Visit')
-                    ->icon('heroicon-o-plus')
-                    ->color('primary')
-                    ->url(fn (Doctor $record): string => VisitResource::getUrl('create', ['doctor_id' => $record->id])),
+                // Action::make('new_visit')
+                //     ->label('New Visit')
+                //     ->icon('heroicon-o-plus')
+                //     ->color('primary')
+                //     ->url(fn (Doctor $record): string => VisitResource::getUrl('create', ['doctor_id' => $record->id])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at','desc');
     }
 }

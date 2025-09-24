@@ -13,7 +13,7 @@ class DrugFormFactory extends Factory
     {
         return [
             'name' => $this->faker->randomElement(['Tablet', 'Capsule', 'Syrup', 'Injection', 'Cream', 'Drops']),
-            'description' => $this->faker->sentence(),
+            'description' => $this->faker->sentence,
             'is_active' => true,
         ];
     }

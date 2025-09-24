@@ -50,7 +50,7 @@ class DrugsTable
                     ->sortable()
                     ->alignCenter()
                     ->color(function (Drug $record): string {
-                        $stock = (int) $record->stock;
+                        $stock = (int) $record->total_stock;
                         $minStock = $record->min_stock;
 
                         if ($stock == 0) return 'danger';
@@ -68,7 +68,7 @@ class DrugsTable
 
                 IconColumn::make('stock_alert')
                     ->label('Stock Alert')
-                    ->getStateUsing(fn (Drug $record): bool => (int) $record->stock <= $record->min_stock)
+                    ->getStateUsing(fn (Drug $record): bool => (int) $record->total_stock <= $record->min_stock)
                     ->boolean()
                     ->trueIcon('heroicon-o-exclamation-triangle')
                     ->falseIcon('heroicon-o-check-circle')

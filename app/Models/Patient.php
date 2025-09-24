@@ -48,4 +48,9 @@ class Patient extends Model
 
         return $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
     }
+
+    public function drugSales(): HasMany
+    {
+        return $this->hasMany(DrugSale::class);
+    }
 }

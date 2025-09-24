@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Filament\Resources\Drugs\RelationManagers;
+namespace App\Filament\Resources\DrugSales\RelationManagers;
 
-use App\Filament\Resources\DrugBatches\DrugBatchResource;
+use App\Filament\Resources\Invoices\InvoiceResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 
-class BatchesRelationManager extends RelationManager
+class InvoiceRelationManager extends RelationManager
 {
-    protected static string $relationship = 'batches';
+    protected static string $relationship = 'invoice';
 
-    protected static ?string $relatedResource = DrugBatchResource::class;
+    protected static ?string $relatedResource = InvoiceResource::class;
 
     public function table(Table $table): Table
     {

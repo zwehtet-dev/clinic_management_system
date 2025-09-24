@@ -19,6 +19,11 @@ class Invoice extends Model
         'status',
     ];
 
+    protected $casts = [
+        'invoice_date' => 'date',
+        'total_amount' => 'decimal:2',
+    ];
+
     public function invoiceable()
     {
         return $this->morphTo();
@@ -27,6 +32,16 @@ class Invoice extends Model
     public function invoiceItems()
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function drugItems()
+    {
+        return $this->invoiceItems()->whereHasMorph('itemable', [\App\Models\DrugBatch::class]);
+    }
+
+    public function serviceItems()
+    {
+        return $this->invoiceItems()->whereHasMorph('itemable', [\App\Models\Service::class]);
     }
 
     public static function generateInvoiceNumber(): string
@@ -40,6 +55,21 @@ class Invoice extends Model
         $nextNumber = $lastInvoice ? $lastInvoice->id + 1 : 1;
 
         return $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($invoice) {
+            // Restore stock for drug items when invoice is deleted
+            foreach ($invoice->drugItems as $item) {
+                if ($item->itemable_type === DrugBatch::class) {
+                    $batch = DrugBatch::find($item->itemable_id);
+                    if ($batch) {
+                        $batch->increment('quantity_available', $item->quantity);
+                    }
+                }
+            }
+        });
     }
 
 }

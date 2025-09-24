@@ -17,10 +17,11 @@ class DrugSalesTable
             ->columns([
                 TextColumn::make('public_id')
                     ->searchable(),
-                TextColumn::make('patient_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('buyer_name')
+                // TextColumn::make('patient_id')
+                //     ->numeric()
+                //     ->sortable(),
+                TextColumn::make('buyer_display_name')
+                    ->label('Buyer')
                     ->searchable(),
                 TextColumn::make('sale_date')
                     ->date()
