@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources\DrugSales\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Tables\Table;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
 
 class DrugSalesTable
 {
@@ -28,7 +29,17 @@ class DrugSalesTable
                     ->sortable(),
                 TextColumn::make('total_amount')
                     ->numeric()
+                    ->suffix(' Ks')
                     ->sortable(),
+                IconColumn::make('has_invoice')
+                    ->label('Invoice')
+                    ->getStateUsing(fn ($record) => $record->invoice !== null)
+                    ->boolean()
+                    ->trueIcon('heroicon-o-document-text')
+                    ->falseIcon('heroicon-o-document')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->alignCenter(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -49,6 +60,7 @@ class DrugSalesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('sale_date','desc');
     }
 }

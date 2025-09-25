@@ -21,7 +21,8 @@ class DrugSaleInfolist
                         TextEntry::make('sale_date')
                             ->date(),
                         TextEntry::make('total_amount')
-                            ->numeric(),
+                            ->numeric()
+                            ->suffix(' Ks'),
                         TextEntry::make('created_at')
                             ->dateTime()
                             ->placeholder('-'),

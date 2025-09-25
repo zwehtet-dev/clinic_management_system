@@ -64,7 +64,7 @@ class DailyReport extends Model
 
         // Drug sale revenue
         $drugSaleRevenue = DrugSale::whereDate('sale_date', $dateString)
-            ->sum('total_amount');
+            ->invoice->sum('total_amount');
 
         // Total revenue from invoices
         $totalRevenue = Invoice::where('status', 'paid')

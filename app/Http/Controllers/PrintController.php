@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
-use App\Services\PrinterService;
-use App\Jobs\PrintInvoiceJob;
 use Illuminate\Http\Request;
+use App\Services\PrinterService;
 use Illuminate\Http\JsonResponse;
-use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class PrintController extends Controller
 {
@@ -19,34 +19,22 @@ class PrintController extends Controller
     }
 
     /**
-     * Print invoice immediately
+     * Generate print URL for invoice
      */
     public function printInvoice(Request $request, Invoice $invoice): JsonResponse
     {
         try {
-            $printerOptions = [
-                'printer_type' => $request->get('printer_type', config('printing.default_printer_type')),
-                'printer_name' => $request->get('printer_name'),
-                'copies' => $request->get('copies', config('printing.print_copies')),
-            ];
+            $format = $request->get('format', 'receipt'); // receipt, thermal, a4
+            $options = ['format' => $format];
 
-            if (config('printing.enable_print_queue')) {
-                // Queue the print job
-                PrintInvoiceJob::dispatch($invoice, $printerOptions);
+            $printUrl = $this->printerService->printInvoice($invoice, $options);
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Invoice queued for printing',
-                ]);
-            } else {
-                // Print immediately
-                $success = $this->printerService->printInvoice($invoice, $printerOptions);
-
-                return response()->json([
-                    'success' => $success,
-                    'message' => $success ? 'Invoice printed successfully' : 'Failed to print invoice',
-                ]);
-            }
+            return response()->json([
+                'success' => true,
+                'print_url' => $printUrl,
+                'format' => $format,
+                'message' => 'Print URL generated successfully',
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -56,89 +44,144 @@ class PrintController extends Controller
     }
 
     /**
-     * Test printer connection
+     * Generate thermal receipt print URL
      */
-    public function testPrinter(Request $request): JsonResponse
+    public function printThermal(Request $request, Invoice $invoice): JsonResponse
     {
         try {
-            $printerOptions = [
-                'printer_type' => $request->get('printer_type', config('printing.default_printer_type')),
-                'printer_name' => $request->get('printer_name'),
-                'connection_type' => $request->get('connection_type'),
-                'host' => $request->get('host'),
-                'port' => $request->get('port'),
-            ];
-
-            $success = $this->printerService->testPrinter($printerOptions);
-
-            return response()->json([
-                'success' => $success,
-                'message' => $success ? 'Printer test successful' : 'Printer test failed',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Test error: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get available printers
-     */
-    public function getAvailablePrinters(): JsonResponse
-    {
-        try {
-            $printers = $this->printerService->getAvailablePrinters();
+            $printUrl = $this->printerService->printThermalReceipt($invoice);
 
             return response()->json([
                 'success' => true,
-                'printers' => $printers,
+                'print_url' => $printUrl,
+                'format' => 'thermal',
+                'message' => 'Thermal print URL generated successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error getting printers: ' . $e->getMessage(),
+                'message' => 'Thermal print error: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Print multiple invoices
+     * Generate A4 print URL
      */
-    public function printMultipleInvoices(Request $request): JsonResponse
+    public function printA4(Request $request, Invoice $invoice): JsonResponse
     {
         try {
-            $invoiceIds = $request->get('invoice_ids', []);
-            $printerOptions = [
-                'printer_type' => $request->get('printer_type', config('printing.default_printer_type')),
-                'printer_name' => $request->get('printer_name'),
-            ];
+            $printUrl = $this->printerService->printA4Invoice($invoice);
 
-            $printed = 0;
-            foreach ($invoiceIds as $invoiceId) {
-                $invoice = Invoice::find($invoiceId);
-                if ($invoice) {
-                    if (config('printing.enable_print_queue')) {
-                        PrintInvoiceJob::dispatch($invoice, $printerOptions);
-                        $printed++;
-                    } else {
-                        if ($this->printerService->printInvoice($invoice, $printerOptions)) {
-                            $printed++;
-                        }
-                    }
-                }
+            return response()->json([
+                'success' => true,
+                'print_url' => $printUrl,
+                'format' => 'a4',
+                'message' => 'A4 print URL generated successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A4 print error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Handle web-based print requests
+     */
+    public function webPrint(string $token)
+    {
+        try {
+            $printData = Cache::get("print_token_{$token}");
+
+            if (!$printData) {
+                abort(404, 'Print token not found or expired');
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => "Queued {$printed} invoices for printing",
-            ]);
+            // Load invoice with all necessary relationships
+            $invoice = Invoice::with([
+                'invoiceItems',
+                'invoiceItems.itemable',
+                'invoiceable',
+                'invoiceable.patient',
+                'invoiceable.doctor'
+            ])->find($printData['invoice_id']);
+
+            if (!$invoice) {
+                abort(404, 'Invoice not found');
+            }
+
+            // Safely load drug relationships for drug batches
+            if ($invoice->invoiceItems) {
+                $invoice->invoiceItems->each(function($item) {
+                    if ($item->itemable_type === 'App\\Models\\DrugBatch' && $item->itemable) {
+                        try {
+                            $item->itemable->load('drug');
+                        } catch (\Exception $e) {
+                            // If drug relationship fails to load, continue without it
+                            Log::warning("Failed to load drug for batch {$item->itemable_id}: " . $e->getMessage());
+                        }
+                    }
+                });
+            }
+
+            $format = $printData['format'] ?? 'receipt';
+
+            // Clear the token after use
+            Cache::forget("print_token_{$token}");
+
+            // Add performance data for large invoices
+            $performanceData = $this->getInvoicePerformanceData($invoice, $format);
+
+            // Choose the appropriate view based on format
+            $view = match($format) {
+                'thermal' => 'print.thermal',
+                'a4' => 'print.a4',
+                default => 'print.invoice'
+            };
+
+            return view($view, compact('invoice', 'format', 'performanceData'));
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Bulk print error: ' . $e->getMessage(),
+            Log::error('Print error: ' . $e->getMessage(), [
+                'token' => $token,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Return a simple error page instead of aborting
+            return response()->view('errors.print-error', [
+                'message' => 'Error loading print data: ' . $e->getMessage(),
+                'token' => $token
             ], 500);
         }
     }
+
+    /**
+     * Get performance optimization data for large invoices
+     */
+    private function getInvoicePerformanceData(Invoice $invoice, string $format): array
+    {
+        $itemCount = $invoice->invoiceItems->count();
+        $drugCount = $invoice->invoiceItems->where('itemable_type', 'App\\Models\\DrugBatch')->count();
+        $serviceCount = $invoice->invoiceItems->where('itemable_type', 'App\\Models\\Service')->count();
+
+        $limits = match($format) {
+            'thermal' => \App\Models\Setting::get('thermal_max_items', 12),
+            'receipt' => \App\Models\Setting::get('receipt_max_items', 15),
+            'a4' => 30, // Items per page for A4
+            default => 15
+        };
+
+        return [
+            'total_items' => $itemCount,
+            'drug_count' => $drugCount,
+            'service_count' => $serviceCount,
+            'display_limit' => $limits,
+            'will_paginate' => $itemCount > $limits,
+            'compact_items' => max(0, $itemCount - $limits),
+            'estimated_pages' => $format === 'a4' ? ceil($itemCount / 30) : 1,
+        ];
+    }
+
 }
+

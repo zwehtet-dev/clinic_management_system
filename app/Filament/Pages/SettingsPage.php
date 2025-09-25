@@ -45,29 +45,19 @@ class SettingsPage extends Page implements HasForms
             'clinic_name' => Setting::get('clinic_name'),
             'clinic_address' => Setting::get('clinic_address'),
             'clinic_phone' => Setting::get('clinic_phone'),
-
-            // Operational Settings
-            'auto_generate_reports' => Setting::get('auto_generate_reports'),
-            'auto_print_invoices' => Setting::get('auto_print_invoices'),
-
+            'clinic_email' => Setting::get('clinic_email'),
 
             // Financial Settings
             'consultation_fee_default' => Setting::get('consultation_fee_default'),
             'invoice_terms' => Setting::get('invoice_terms'),
+            'currency_symbol' => Setting::get('currency_symbol'),
 
-            // Printer Settings
-            'default_printer_type' => config('printing.default_printer_type'),
-            'thermal_connection_type' => config('printing.thermal_connection_type'),
-            'thermal_printer_name' => config('printing.thermal_printer_name'),
-            'thermal_device_path' => config('printing.thermal_device_path'),
-            'thermal_network_host' => config('printing.thermal_network_host'),
-            'thermal_network_port' => config('printing.thermal_network_port'),
-            'regular_printer_name' => config('printing.regular_printer_name'),
-            'network_printer_host' => config('printing.network_printer_host'),
-            'network_printer_port' => config('printing.network_printer_port'),
-            'auto_print_invoices' => config('printing.auto_print_invoices'),
-            'print_copies' => config('printing.print_copies'),
-            'enable_print_queue' => config('printing.enable_print_queue'),
+            // Print Settings
+            'auto_open_print_window' => Setting::get('auto_open_print_window'),
+            'print_logo' => Setting::get('print_logo'),
+            'print_format' => Setting::get('print_format'),
+            'thermal_max_items' => Setting::get('thermal_max_items'),
+            'receipt_max_items' => Setting::get('receipt_max_items'),
         ]);
     }
 
@@ -92,13 +82,13 @@ class SettingsPage extends Page implements HasForms
                                             ->required()
                                             ->maxLength(255),
 
-                                        FileUpload::make('clinic_logo')
-                                            ->label('Clinic Logo')
-                                            ->image()
-                                            ->directory('clinic')
-                                            ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg'])
-                                            ->maxSize(2048)
-                                            ->helperText('Upload clinic logo (PNG, JPG - Max 2MB)'),
+                                        // FileUpload::make('clinic_logo')
+                                        //     ->label('Clinic Logo')
+                                        //     ->image()
+                                        //     ->directory('clinic')
+                                        //     ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg'])
+                                        //     ->maxSize(2048)
+                                        //     ->helperText('Upload clinic logo (PNG, JPG - Max 2MB)'),
                                     ])
                                     ->columns(2),
 
@@ -122,18 +112,10 @@ class SettingsPage extends Page implements HasForms
                                     ->columns(2),
                             ]),
 
-                        Tab::make('System Settings')
-                            ->icon('heroicon-o-cog-6-tooth')
+                        Tab::make('Financial Settings')
+                            ->icon('heroicon-o-currency-dollar')
                             ->schema([
-
-                                Section::make('Automation Settings')
-                                    ->schema([
-                                        Toggle::make('auto_generate_reports')
-                                            ->label('Auto Generate Daily Reports')
-                                            ->helperText('Automatically generate daily reports each morning'),
-                                    ])
-                                    ->columns(2),
-                                Section::make('Financial Settings')
+                                Section::make('Default Fees & Currency')
                                     ->schema([
                                         TextInput::make('consultation_fee_default')
                                             ->label('Default Consultation Fee')
@@ -141,6 +123,11 @@ class SettingsPage extends Page implements HasForms
                                             ->suffix(' Ks')
                                             ->step(0.01)
                                             ->minValue(0),
+
+                                        TextInput::make('currency_symbol')
+                                            ->label('Currency Symbol')
+                                            ->default('Ks')
+                                            ->maxLength(10),
 
                                         Textarea::make('invoice_terms')
                                             ->label('Default Invoice Terms')
@@ -151,121 +138,47 @@ class SettingsPage extends Page implements HasForms
                                     ->columns(2),
                             ]),
 
-                        Tab::make('Printer Settings')
+                        Tab::make('Print Settings')
                             ->icon('heroicon-o-printer')
                             ->schema([
-                                Action::make('test_printer')
-                                    ->label('Test Printer')
-                                    ->icon('heroicon-o-printer')
-                                    ->color('info')
-                                    ->action(function (PrinterService $printerService) {
-                                        $success = $printerService->testPrinter($this->data);
-
-                                        if ($success) {
-                                            Notification::make()
-                                                ->title('Printer test successful')
-                                                ->success()
-                                                ->send();
-                                        } else {
-                                            Notification::make()
-                                                ->title('Printer test failed')
-                                                ->danger()
-                                                ->body('Please check your printer settings and connection.')
-                                                ->send();
-                                        }
-                                    }),
-                                Section::make('General Settings')
+                                Section::make('Print Options')
+                                    ->description('Configure printing behavior for invoices')
                                     ->schema([
-                                        Select::make('default_printer_type')
-                                            ->label('Default Printer Type')
+                                        Select::make('print_format')
+                                            ->label('Default Print Format')
                                             ->options([
-                                                'thermal' => 'Thermal Receipt Printer',
-                                                'regular' => 'Regular Printer (A4)',
-                                                'network' => 'Network Printer',
+                                                'receipt' => 'Receipt (80mm)',
+                                                'thermal' => 'Thermal Receipt (58mm)',
+                                                'a4' => 'A4 Invoice',
                                             ])
-                                            ->required()
-                                            ->live(),
+                                            ->default('receipt')
+                                            ->helperText('Choose the default format for printing invoices'),
 
-                                        Toggle::make('auto_print_invoices')
-                                            ->label('Auto Print Invoices')
-                                            ->helperText('Automatically print invoices when created'),
+                                        Toggle::make('auto_open_print_window')
+                                            ->label('Auto-open Print Window')
+                                            ->helperText('Automatically open print window when invoice is created'),
 
-                                        TextInput::make('print_copies')
-                                            ->label('Number of Copies')
+                                        Toggle::make('print_logo')
+                                            ->label('Include Logo on Receipts')
+                                            ->helperText('Show clinic logo on printed receipts'),
+
+                                        TextInput::make('thermal_max_items')
+                                            ->label('Thermal Receipt - Max Detailed Items')
                                             ->numeric()
-                                            ->default(1)
-                                            ->minValue(1)
-                                            ->maxValue(5),
+                                            ->default(12)
+                                            ->minValue(5)
+                                            ->maxValue(20)
+                                            ->helperText('Maximum items to show in detail on thermal receipts'),
 
-                                        Toggle::make('enable_print_queue')
-                                            ->label('Enable Print Queue')
-                                            ->helperText('Use background queue for printing (recommended)'),
+                                        TextInput::make('receipt_max_items')
+                                            ->label('Standard Receipt - Max Detailed Items')
+                                            ->numeric()
+                                            ->default(15)
+                                            ->minValue(8)
+                                            ->maxValue(25)
+                                            ->helperText('Maximum items to show in detail on standard receipts'),
                                     ])
                                     ->columns(2),
-
-                                Section::make('Thermal Printer Settings')
-                                    ->schema([
-                                        Select::make('thermal_connection_type')
-                                            ->label('Connection Type')
-                                            ->options([
-                                                'windows' => 'Windows Printer',
-                                                'cups' => 'CUPS (Linux/macOS)',
-                                                'file' => 'Direct Device File',
-                                                'network' => 'Network Connection',
-                                            ])
-                                            ->required()
-                                            ->live(),
-
-                                        TextInput::make('thermal_printer_name')
-                                            ->label('Printer Name')
-                                            ->helperText('Windows printer name or CUPS printer name')
-                                            ->visible(fn (Get $get): bool =>
-                                                in_array($get('thermal_connection_type'), ['windows', 'cups'])),
-
-                                        TextInput::make('thermal_device_path')
-                                            ->label('Device Path')
-                                            ->helperText('e.g., /dev/usb/lp0 or /dev/ttyUSB0')
-                                            ->visible(fn (Get $get): bool =>
-                                                $get('thermal_connection_type') === 'file'),
-
-                                        TextInput::make('thermal_network_host')
-                                            ->label('Network Host')
-                                            ->helperText('IP address of network printer')
-                                            ->visible(fn (Get $get): bool =>
-                                                $get('thermal_connection_type') === 'network'),
-
-                                        TextInput::make('thermal_network_port')
-                                            ->label('Network Port')
-                                            ->numeric()
-                                            ->default(9100)
-                                            ->visible(fn (Get $get): bool =>
-                                                $get('thermal_connection_type') === 'network'),
-                                    ])
-                                    ->columns(2)
-                                    ->visible(fn (Get $get): bool => $get('default_printer_type') === 'thermal'),
-
-                                Section::make('Regular Printer Settings')
-                                    ->schema([
-                                        TextInput::make('regular_printer_name')
-                                            ->label('Printer Name')
-                                            ->helperText('System printer name for A4 printing'),
-                                    ])
-                                    ->visible(fn (Get $get): bool => $get('default_printer_type') === 'regular'),
-
-                                Section::make('Network Printer Settings')
-                                    ->schema([
-                                        TextInput::make('network_printer_host')
-                                            ->label('Host IP Address')
-                                            ->required(),
-
-                                        TextInput::make('network_printer_port')
-                                            ->label('Port')
-                                            ->numeric()
-                                            ->default(9100)
-                                            ->required(),
-                                    ])
-                                    ->columns(2)
-                                    ->visible(fn (Get $get): bool => $get('default_printer_type') === 'network'),
                             ]),
                     ])
                     ->columnSpanFull(),
@@ -306,34 +219,19 @@ class SettingsPage extends Page implements HasForms
         $data = $this->form->getState();
 
         foreach ($data as $key => $value) {
-            if ($key === 'clinic_logo') {
-                if ($value) {
-                    // Handle logo upload
-                    Setting::set('clinic_logo_path', $value, 'string', 'Path to clinic logo file');
-                }
-                continue;
-            }
+            // if ($key === 'clinic_logo') {
+            //     if ($value) {
+            //         // Handle logo upload
+            //         Setting::set('clinic_logo_path', $value, 'string', 'Path to clinic logo file');
+            //     }
+            //     continue;
+            // }
 
             $type = $this->getSettingType($key, $value);
             Setting::set($key, $value, $type);
         }
 
-        $this->updateEnvVariables([
-            'DEFAULT_PRINTER_TYPE' => $data['default_printer_type'],
-            'THERMAL_CONNECTION_TYPE' => $data['thermal_connection_type'],
-            'THERMAL_PRINTER_NAME' => $data['thermal_printer_name'],
-            'THERMAL_DEVICE_PATH' => $data['thermal_device_path'],
-            'THERMAL_NETWORK_HOST' => $data['thermal_network_host'],
-            'THERMAL_NETWORK_PORT' => $data['thermal_network_port'],
-            'REGULAR_PRINTER_NAME' => $data['regular_printer_name'],
-            'NETWORK_PRINTER_HOST' => $data['network_printer_host'],
-            'NETWORK_PRINTER_PORT' => $data['network_printer_port'],
-            'AUTO_PRINT_INVOICES' => $data['auto_print_invoices'] ? 'true' : 'false',
-            'PRINT_COPIES' => $data['print_copies'],
-            'ENABLE_PRINT_QUEUE' => $data['enable_print_queue'] ? 'true' : 'false',
-        ]);
-
-        Artisan::call('config:cache');
+        // No need to update env variables for database-stored settings
 
         // Clear all setting caches
         Cache::flush();
@@ -373,22 +271,5 @@ class SettingsPage extends Page implements HasForms
         return 'string';
     }
 
-    private function updateEnvVariables(array $variables): void
-    {
-        $envPath = base_path('.env');
-        $envContent = file_get_contents($envPath);
 
-        foreach ($variables as $key => $value) {
-            $pattern = "/^{$key}=.*/m";
-            $replacement = "{$key}={$value}";
-
-            if (preg_match($pattern, $envContent)) {
-                $envContent = preg_replace($pattern, $replacement, $envContent);
-            } else {
-                $envContent .= "\n{$replacement}";
-            }
-        }
-
-        file_put_contents($envPath, $envContent);
-    }
 }

@@ -26,4 +26,19 @@ class DoctorReferral extends Model
     {
         return $this->belongsTo(Visit::class);
     }
+
+    public function scopePaid($query)
+    {
+        return $query->where('status', 'paid');
+    }
+
+    public function scopeUnpaid($query)
+    {
+        return $query->where('status', 'unpaid');
+    }
+
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
+    }
 }

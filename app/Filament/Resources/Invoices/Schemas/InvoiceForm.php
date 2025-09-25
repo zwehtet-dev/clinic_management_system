@@ -162,6 +162,17 @@ class InvoiceForm
                             ->numeric()
                             ->suffix(' Ks')
                             ->disabled()
+                            ->default(function(){
+                                if(request()->exists('visit_id'))
+                                {
+                                    $visit = Visit::find(request()->get('visit_id'));
+                                    if($visit) {
+                                        return $visit->consultation_fee;
+                                    }
+
+                                }
+                                return 0;
+                            })
                             ->dehydrated(),
                     ])
                     ->columns(3)

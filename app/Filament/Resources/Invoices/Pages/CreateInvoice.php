@@ -72,5 +72,17 @@ class CreateInvoice extends CreateRecord
                 }
             }
         }
+
+        // Auto-open print window if enabled
+        if (\App\Models\Setting::get('auto_open_print_window', true)) {
+            $printUrl = app(\App\Services\PrinterService::class)->printInvoice($invoice);
+            
+            // Use JavaScript to open print window
+            $this->js("
+                setTimeout(function() {
+                    window.open('{$printUrl}', '_blank', 'width=400,height=600,scrollbars=yes');
+                }, 1000);
+            ");
+        }
     }
 }

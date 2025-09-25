@@ -50,10 +50,10 @@ class AdminPanelProvider extends PanelProvider
 //                AccountWidget::class,
 //                FilamentInfoWidget::class,
                 StatsOverview::class,
-                RevenueChartWidget::class,
-                PatientVisitsChartWidget::class,
-                ExpenseCategoryChartWidget::class,
-                MonthlyComparisonWidget::class,
+                // RevenueChartWidget::class,
+                // PatientVisitsChartWidget::class,
+                // ExpenseCategoryChartWidget::class,
+                // MonthlyComparisonWidget::class,
                 StockAlertWidget::class,
                 DrugBatchExpiryWidget::class
             ])

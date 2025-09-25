@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Ramsey\Uuid\Type\Decimal;
 
 class DrugSale extends Model
 {
@@ -14,12 +15,10 @@ class DrugSale extends Model
         'patient_id',
         'buyer_name',
         'sale_date',
-        'total_amount'
     ];
 
     protected $casts = [
         'sale_date' => 'date',
-        'total_amount' => 'decimal:2',
     ];
 
     public function patient()
@@ -65,5 +64,10 @@ class DrugSale extends Model
     public function getBuyerDisplayNameAttribute(): string
     {
         return $this->patient ? $this->patient->name : ($this->buyer_name ?: 'Walk-in Customer');
+    }
+
+    public function getTotalAmountAttribute(): string
+    {
+        return  (string) $this->invoice ? $this->invoice->total_amount  : 0;
     }
 }

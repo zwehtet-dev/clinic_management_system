@@ -7,10 +7,13 @@ use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Support\Colors\Color;
+use Illuminate\Support\HtmlString;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Notifications\Notification;
 use Filament\Tables\Filters\SelectFilter;
 use App\Filament\Resources\Visits\VisitResource;
 
@@ -90,8 +93,42 @@ class DoctorsTable
                     ]),
             ])
             ->recordActions([
+                Action::make('markAllAsPaid')
+                    ->label('Paid')
+                    ->color(Color::Blue)
+                    ->icon('heroicon-o-check-badge')
+                    ->requiresConfirmation()
+                    ->modalHeading('Confirm Payment')
+                    ->modalContent(function ($record) {
+                        // calculate total unpaid for this doctor
+                        $totalUnpaid = $record->doctorReferrals()
+                            ->where('status', 'unpaid')
+                            ->sum('referral_fee');
+
+                        return new HtmlString(
+                            "<p style='text-align: center;'>Paid Amount: <span style='color: #228B22;' >{$totalUnpaid} Ks</span></p>"
+                        );
+                    })
+                    ->action(function ($record) {
+                        // calculate again for notification
+                        $totalUnpaid = $record->doctorReferrals()
+                            ->where('status', 'unpaid')
+                            ->sum('referral_fee');
+
+                        // mark all unpaid referrals as paid
+                        $record->doctorReferrals()
+                            ->where('status', 'unpaid')
+                            ->update(['status' => 'paid']);
+
+                        Notification::make()
+                            ->title("Paid {$totalUnpaid} Ks to {$record->name}")
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn($record)=>(bool) $record->doctorReferrals()->where('status', 'unpaid')->sum('referral_fee') > 0),
                 ViewAction::make(),
                 EditAction::make(),
+
                 // Action::make('new_visit')
                 //     ->label('New Visit')
                 //     ->icon('heroicon-o-plus')
