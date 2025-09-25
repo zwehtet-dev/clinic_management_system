@@ -62,9 +62,12 @@ class DailyReport extends Model
         // Drug sales on this date
         $drugSalesCount = DrugSale::whereDate('sale_date', $dateString)->count();
 
-        // Drug sale revenue
         $drugSaleRevenue = DrugSale::whereDate('sale_date', $dateString)
-            ->invoice->sum('total_amount');
+            ->with('invoice') // eager load invoice
+            ->get()           // get collection
+            ->sum(function ($drugSale) {
+                return $drugSale->invoice?->total_amount ?? 0; // use null-safe operator
+            });
 
         // Total revenue from invoices
         $totalRevenue = Invoice::where('status', 'paid')

@@ -8,7 +8,7 @@ deployment:
     - mkdir -p $DEPLOYPATH/storage/framework/sessions
     - mkdir -p $DEPLOYPATH/storage/framework/views
     - mkdir -p $DEPLOYPATH/bootstrap/cache
-    
+
     # Copy application files
     - /bin/cp -R * $DEPLOYPATH/
     
@@ -17,6 +17,7 @@ deployment:
     
     # Install Composer dependencies (if composer is available)
     - cd $DEPLOYPATH && composer install --no-dev --optimize-autoloader --no-interaction || echo "Composer not available, please install dependencies manually"
+    
     
     # Set proper permissions
     - chmod -R 755 $DEPLOYPATH/storage
@@ -47,4 +48,4 @@ deployment:
     - chmod -R 755 $DEPLOYPATH/bootstrap/cache
     
     # Create symlink for storage (if needed)
-    - cd $DEPLOYPATH && php artisan storage:link || echo "Storage link skipped"
+    - cd $DEPLOYPATH && php artisan storage:link || echo "Storage link skipped"E
