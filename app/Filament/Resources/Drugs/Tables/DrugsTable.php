@@ -20,6 +20,10 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\DrugsExport;
 
 class DrugsTable
 {
@@ -58,7 +62,7 @@ class DrugsTable
                         return 'success';
                     })
                     ->weight(function (Drug $record): string {
-                        $stock = (int) $record->stock;
+                        $stock = (int) $record->total_stock;
                         return $stock <= $record->min_stock ? 'bold' : 'normal';
                     }),
                 TextColumn::make('min_stock')
@@ -181,6 +185,26 @@ class DrugsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('export_selected')
+                        ->label('Export Selected')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('warning')
+                        ->action(function (Collection $records) {
+                            // Create a custom export for selected records
+                            $export = new class($records) extends DrugsExport {
+                                private $records;
+                                
+                                public function __construct($records) {
+                                    $this->records = $records;
+                                }
+                                
+                                public function collection() {
+                                    return $this->records;
+                                }
+                            };
+                            
+                            return Excel::download($export, 'selected_drugs_' . now()->format('Y-m-d_H-i-s') . '.xlsx');
+                        }),
                     DeleteBulkAction::make(),
                 ]),
             ]);

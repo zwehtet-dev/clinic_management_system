@@ -1,0 +1,50 @@
+---
+deployment:
+  tasks:
+    # Create necessary directories
+    - export DEPLOYPATH=/home/$USER/public_html
+    - mkdir -p $DEPLOYPATH/storage/logs
+    - mkdir -p $DEPLOYPATH/storage/framework/cache
+    - mkdir -p $DEPLOYPATH/storage/framework/sessions
+    - mkdir -p $DEPLOYPATH/storage/framework/views
+    - mkdir -p $DEPLOYPATH/bootstrap/cache
+    
+    # Copy application files
+    - /bin/cp -R * $DEPLOYPATH/
+    
+    # Set up environment file
+    - /bin/cp $DEPLOYPATH/.env.example $DEPLOYPATH/.env
+    
+    # Install Composer dependencies (if composer is available)
+    - cd $DEPLOYPATH && composer install --no-dev --optimize-autoloader --no-interaction || echo "Composer not available, please install dependencies manually"
+    
+    # Set proper permissions
+    - chmod -R 755 $DEPLOYPATH/storage
+    - chmod -R 755 $DEPLOYPATH/bootstrap/cache
+    - chmod 644 $DEPLOYPATH/.env
+    
+    # Generate application key (if artisan is available)
+    - cd $DEPLOYPATH && php artisan key:generate --force || echo "Please run 'php artisan key:generate' manually"
+    
+    # Clear and cache config (if artisan is available)
+    - cd $DEPLOYPATH && php artisan config:clear || echo "Config clear skipped"
+    - cd $DEPLOYPATH && php artisan route:clear || echo "Route clear skipped"
+    - cd $DEPLOYPATH && php artisan view:clear || echo "View clear skipped"
+    - cd $DEPLOYPATH && php artisan cache:clear || echo "Cache clear skipped"
+    
+    # Run database migrations (commented out for safety)
+    # - cd $DEPLOYPATH && php artisan migrate --force
+    
+    # Optimize for production
+    - cd $DEPLOYPATH && php artisan config:cache || echo "Config cache skipped"
+    - cd $DEPLOYPATH && php artisan route:cache || echo "Route cache skipped"
+    - cd $DEPLOYPATH && php artisan view:cache || echo "View cache skipped"
+    
+    # Set final permissions
+    - find $DEPLOYPATH -type f -exec chmod 644 {} \;
+    - find $DEPLOYPATH -type d -exec chmod 755 {} \;
+    - chmod -R 755 $DEPLOYPATH/storage
+    - chmod -R 755 $DEPLOYPATH/bootstrap/cache
+    
+    # Create symlink for storage (if needed)
+    - cd $DEPLOYPATH && php artisan storage:link || echo "Storage link skipped"

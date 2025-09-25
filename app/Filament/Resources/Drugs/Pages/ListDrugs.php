@@ -2,9 +2,17 @@
 
 namespace App\Filament\Resources\Drugs\Pages;
 
+use App\Exports\DrugsExport;
+use App\Exports\DrugsTemplateExport;
 use App\Filament\Resources\Drugs\DrugResource;
+use App\Imports\DrugsImport;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\FileUpload;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ListDrugs extends ListRecords
 {
@@ -13,6 +21,72 @@ class ListDrugs extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('downloadTemplate')
+                ->label('Download Template')
+                ->icon(Heroicon::OutlinedDocumentArrowDown)
+                ->color('info')
+                ->action(function () {
+                    return Excel::download(new DrugsTemplateExport, 'drugs_template.xlsx');
+                }),
+            
+            Action::make('import')
+                ->label('Import Drugs')
+                ->icon(Heroicon::OutlinedDocumentArrowUp)
+                ->color('success')
+                ->form([
+                    FileUpload::make('file')
+                        ->label('Excel File')
+                        ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
+                        ->required()
+                        ->helperText('Upload an Excel file (.xlsx or .xls) with drug data. Download the template first to see the required format.')
+                ])
+                ->action(function (array $data) {
+                    try {
+                        $import = new DrugsImport;
+                        Excel::import($import, $data['file']);
+                        
+                        $failures = $import->failures();
+                        $errors = $import->errors();
+                        
+                        if (count($failures) > 0 || count($errors) > 0) {
+                            $errorMessage = 'Import completed with some issues:';
+                            foreach ($failures as $failure) {
+                                $errorMessage .= "\nRow {$failure->row()}: " . implode(', ', $failure->errors());
+                            }
+                            foreach ($errors as $error) {
+                                $errorMessage .= "\n" . $error->getMessage();
+                            }
+                            
+                            Notification::make()
+                                ->title('Import completed with warnings')
+                                ->body($errorMessage)
+                                ->warning()
+                                ->persistent()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Import successful')
+                                ->body('All drugs have been imported successfully.')
+                                ->success()
+                                ->send();
+                        }
+                    } catch (\Exception $e) {
+                        Notification::make()
+                            ->title('Import failed')
+                            ->body('Error: ' . $e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
+            
+            Action::make('export')
+                ->label('Export Drugs')
+                ->icon(Heroicon::OutlinedDocumentArrowDown)
+                ->color('warning')
+                ->action(function () {
+                    return Excel::download(new DrugsExport, 'drugs_' . now()->format('Y-m-d_H-i-s') . '.xlsx');
+                }),
+            
             CreateAction::make(),
         ];
     }

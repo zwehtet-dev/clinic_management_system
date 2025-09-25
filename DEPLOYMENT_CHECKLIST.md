@@ -1,238 +1,172 @@
-# Clinic Management System - Deployment Checklist
+# 🚀 cPanel Deployment Checklist
 
-## Pre-Deployment Requirements
+Use this checklist to ensure successful deployment of your Pharmacy Management System to cPanel.
 
-### ✅ Completed Items
-- [x] Core business logic tested and validated
-- [x] Database schema properly designed with constraints
-- [x] Model relationships correctly implemented
-- [x] Basic data validation in place
-- [x] Unique ID generation working
-- [x] Stock calculation logic functional
+## Pre-Deployment ✅
 
-### ⚠️ Critical Items to Address
+- [ ] Code is committed to Git repository (GitHub/GitLab)
+- [ ] `.cpanel.yml` file is present in repository root
+- [ ] `.env.example` is updated with production settings
+- [ ] All dependencies are listed in `composer.json`
+- [ ] Database migrations are ready
+- [ ] Admin user seeder is prepared
 
-#### 1. Stock Validation Implementation (HIGH PRIORITY)
-**Current State**: Stock validation logic exists but not integrated into the sales process
-**Required Actions**:
-```php
-// Add to DrugSale creation process
-public function createSale($data) {
-    foreach ($data['items'] as $item) {
-        $batch = DrugBatch::find($item['batch_id']);
-        if ($batch->quantity_available < $item['quantity']) {
-            throw new \Exception("Insufficient stock for {$batch->drug->name}");
-        }
-    }
-    // Proceed with sale creation and stock reduction
-}
-```
+## cPanel Setup ✅
 
-#### 2. Automatic Stock Reduction (HIGH PRIORITY)
-**Current State**: `reduceStock()` method exists but not automatically called
-**Required Actions**:
-```php
-// Create Observer for InvoiceItem
-class InvoiceItemObserver {
-    public function created(InvoiceItem $invoiceItem) {
-        if ($invoiceItem->itemable_type === DrugBatch::class) {
-            $batch = $invoiceItem->itemable;
-            $batch->reduceStock($invoiceItem->quantity);
-        }
-    }
-}
-```
+- [ ] **Database Created**
+  - [ ] MySQL database created
+  - [ ] Database user created and assigned
+  - [ ] Database credentials noted down
 
-#### 3. Form Validation Enhancement (MEDIUM PRIORITY)
-**Current State**: Basic validation exists
-**Required Actions**:
-- Add real-time stock checking in Filament forms
-- Implement quantity validation against available stock
-- Add expiry date validation for batch selection
+- [ ] **Git Repository Connected**
+  - [ ] Git Version Control accessed in cPanel
+  - [ ] Repository URL added
+  - [ ] Branch selected (main/master)
+  - [ ] Initial deployment completed
 
-### 🔧 Implementation Tasks
+## Post-Deployment Configuration ✅
 
-#### Task 1: Create Stock Validation Service
-```php
-// app/Services/StockValidationService.php
-class StockValidationService {
-    public function validateSaleItems(array $items): array {
-        $errors = [];
-        foreach ($items as $item) {
-            $batch = DrugBatch::find($item['batch_id']);
-            if (!$batch || $batch->quantity_available < $item['quantity']) {
-                $errors[] = "Insufficient stock for batch {$batch->batch_number}";
-            }
-            if ($batch->expiry_date <= now()) {
-                $errors[] = "Batch {$batch->batch_number} has expired";
-            }
-        }
-        return $errors;
-    }
-}
-```
+- [ ] **Environment File**
+  - [ ] `.env` file exists in public_html
+  - [ ] Database credentials updated
+  - [ ] APP_URL set to your domain
+  - [ ] APP_ENV set to `production`
+  - [ ] APP_DEBUG set to `false`
+  - [ ] MAIL settings configured (if needed)
 
-#### Task 2: Update DrugSale Creation Process
-```php
-// In CreateDrugSale.php
-protected function mutateFormDataBeforeCreate(array $data): array {
-    $stockService = new StockValidationService();
-    $errors = $stockService->validateSaleItems($data['invoice']['invoice_items']);
-    
-    if (!empty($errors)) {
-        throw ValidationException::withMessages(['stock' => $errors]);
-    }
-    
-    return $data;
-}
-```
+- [ ] **Composer Dependencies**
+  - [ ] `vendor` folder exists
+  - [ ] All required packages installed
+  - [ ] Run `composer install --no-dev --optimize-autoloader` if needed
 
-#### Task 3: Implement Stock Reduction Observer
-```php
-// app/Observers/InvoiceItemObserver.php
-class InvoiceItemObserver {
-    public function created(InvoiceItem $invoiceItem): void {
-        if ($invoiceItem->itemable_type === DrugBatch::class) {
-            $batch = $invoiceItem->itemable;
-            if (!$batch->reduceStock($invoiceItem->quantity)) {
-                throw new \Exception('Failed to reduce stock');
-            }
-        }
-    }
-}
-```
+- [ ] **Laravel Configuration**
+  - [ ] Application key generated: `php artisan key:generate --force`
+  - [ ] Database migrated: `php artisan migrate --force`
+  - [ ] Admin user created: `php artisan db:seed --class=UserSeeder`
+  - [ ] Storage linked: `php artisan storage:link`
 
-### 📋 Testing Checklist
+- [ ] **Caching (Production Optimization)**
+  - [ ] Config cached: `php artisan config:cache`
+  - [ ] Routes cached: `php artisan route:cache`
+  - [ ] Views cached: `php artisan view:cache`
 
-#### Before Deployment Testing
-- [ ] Test stock validation with insufficient inventory
-- [ ] Test stock reduction after successful sales
-- [ ] Test expired batch handling
-- [ ] Test concurrent sales scenarios
-- [ ] Verify FIFO batch selection works in UI
-- [ ] Test low stock alerts functionality
-- [ ] Validate invoice calculations with real data
+- [ ] **File Permissions**
+  - [ ] Storage directory: `chmod -R 755 storage/`
+  - [ ] Bootstrap cache: `chmod -R 755 bootstrap/cache/`
+  - [ ] Environment file: `chmod 644 .env`
 
-#### User Acceptance Testing
-- [ ] Train clinic staff on the system
-- [ ] Test patient registration workflow
-- [ ] Test visit creation and management
-- [ ] Test drug sales process
-- [ ] Test invoice generation and printing
-- [ ] Validate reporting functionality
+- [ ] **Document Root Setup**
+  - [ ] Domain/subdomain points to `/public_html/public/` OR
+  - [ ] Files moved from `/public_html/public/` to `/public_html/` with index.php updated
 
-### 🔒 Security Checklist
+## Testing ✅
 
-#### Authentication & Authorization
-- [ ] Set up user roles (Admin, Staff, Pharmacist)
-- [ ] Configure Filament user authentication
-- [ ] Test role-based access to different modules
-- [ ] Implement session management
-- [ ] Set up password policies
+- [ ] **Health Check**
+  - [ ] Access `https://yourdomain.com/health-check.php`
+  - [ ] All checks pass (green ✅)
+  - [ ] Delete health-check.php after verification
 
-#### Data Protection
-- [ ] Configure database backups
-- [ ] Set up audit logging for critical operations
-- [ ] Implement data encryption for sensitive fields
-- [ ] Configure HTTPS for production
-- [ ] Set up proper file permissions
+- [ ] **Application Access**
+  - [ ] Main site loads without errors
+  - [ ] Admin panel accessible: `/admin`
+  - [ ] Login works with admin credentials
+  - [ ] Dashboard displays correctly
 
-### 🚀 Deployment Steps
+- [ ] **Drug Management Features**
+  - [ ] Drugs list page loads
+  - [ ] Can create new drug
+  - [ ] Excel template downloads: `/drugs/template`
+  - [ ] Excel import works: test with sample data
+  - [ ] Excel export works: download drugs data
 
-#### 1. Environment Setup
-```bash
-# Production environment configuration
-cp .env.example .env.production
-php artisan key:generate
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
+- [ ] **Printing System**
+  - [ ] Print settings accessible
+  - [ ] Test invoice printing (if applicable)
+  - [ ] Thermal/A4 print options work
 
-#### 2. Database Setup
-```bash
-# Run migrations
-php artisan migrate --force
+## Security Verification ✅
 
-# Seed initial data
-php artisan db:seed --class=UserSeeder
-php artisan db:seed --class=DrugFormSeeder
-php artisan db:seed --class=SettingsSeeder
-```
+- [ ] **File Access**
+  - [ ] `.env` file not publicly accessible
+  - [ ] `composer.json` not publicly accessible
+  - [ ] Storage directory not publicly accessible
+  - [ ] Bootstrap cache not publicly accessible
 
-#### 3. File Permissions
-```bash
-chmod -R 755 storage/
-chmod -R 755 bootstrap/cache/
-chown -R www-data:www-data storage/
-chown -R www-data:www-data bootstrap/cache/
-```
+- [ ] **SSL Certificate**
+  - [ ] SSL certificate installed and active
+  - [ ] HTTPS redirect working
+  - [ ] Mixed content warnings resolved
 
-#### 4. Web Server Configuration
-- Configure Apache/Nginx virtual host
-- Set up SSL certificate
-- Configure PHP settings (memory_limit, max_execution_time)
-- Set up log rotation
+- [ ] **Application Security**
+  - [ ] Strong admin password set
+  - [ ] APP_DEBUG is false
+  - [ ] Error reporting disabled for public
+  - [ ] File upload validation working
 
-### 📊 Monitoring & Maintenance
+## Performance Optimization ✅
 
-#### Performance Monitoring
-- [ ] Set up application performance monitoring
-- [ ] Monitor database query performance
-- [ ] Track memory usage and response times
-- [ ] Set up error logging and alerting
+- [ ] **PHP Settings**
+  - [ ] OPcache enabled in cPanel
+  - [ ] PHP version 8.2+ selected
+  - [ ] Memory limit adequate (256MB+)
+  - [ ] Max execution time sufficient (60s+)
 
-#### Regular Maintenance
-- [ ] Schedule database backups (daily)
-- [ ] Monitor disk space usage
-- [ ] Update dependencies regularly
-- [ ] Review and archive old data
+- [ ] **Laravel Optimization**
+  - [ ] All caches enabled (config, route, view)
+  - [ ] Composer autoloader optimized
+  - [ ] Unnecessary files removed (tests, docs)
 
-### 🆘 Rollback Plan
+## Backup & Maintenance ✅
 
-#### In Case of Issues
-1. **Database Rollback**: Keep database backup before deployment
-2. **Code Rollback**: Use Git tags for version control
-3. **Configuration Rollback**: Backup current .env file
-4. **Emergency Contacts**: List of technical contacts
+- [ ] **Backup Strategy**
+  - [ ] Database backup scheduled
+  - [ ] File backup scheduled
+  - [ ] Git repository is backup source
 
-### 📞 Support Structure
+- [ ] **Monitoring**
+  - [ ] Error logs location noted: `storage/logs/laravel.log`
+  - [ ] cPanel error logs accessible
+  - [ ] Disk space monitoring set up
 
-#### Technical Support
-- **Primary Developer**: [Contact Information]
-- **Database Administrator**: [Contact Information]
-- **System Administrator**: [Contact Information]
+## Final Steps ✅
 
-#### User Support
-- **Training Materials**: Create user manuals
-- **Help Desk**: Set up support ticket system
-- **Emergency Procedures**: Document critical workflows
+- [ ] **Documentation**
+  - [ ] Admin credentials documented securely
+  - [ ] Database credentials documented
+  - [ ] Deployment process documented
+  - [ ] User guide provided to end users
 
-### ✅ Final Deployment Approval
+- [ ] **Cleanup**
+  - [ ] `health-check.php` deleted
+  - [ ] Test files removed
+  - [ ] Development tools disabled
 
-#### Sign-off Required From:
-- [ ] Technical Lead (Code Review)
-- [ ] Database Administrator (Schema Review)
-- [ ] Security Officer (Security Review)
-- [ ] Clinic Manager (User Acceptance)
-- [ ] System Administrator (Infrastructure Ready)
+- [ ] **User Training**
+  - [ ] Admin user trained on system
+  - [ ] Drug import/export process explained
+  - [ ] Printing system demonstrated
+  - [ ] Backup/maintenance procedures explained
+
+## Emergency Contacts 📞
+
+- **Hosting Provider:** ________________
+- **Domain Registrar:** ________________
+- **Developer:** ________________
+- **Database Admin:** ________________
+
+## Important URLs 🔗
+
+- **Main Site:** https://yourdomain.com
+- **Admin Panel:** https://yourdomain.com/admin
+- **Drug Import:** https://yourdomain.com/drugs/import-page
+- **Template Download:** https://yourdomain.com/drugs/template
 
 ---
 
-**Deployment Target Date**: [To be determined]  
-**Go-Live Date**: [To be determined]  
-**Post-Deployment Review**: [Schedule 1 week after go-live]
+**✅ Deployment Complete!** 
 
-## Emergency Contacts
-
-| Role | Name | Phone | Email |
-|------|------|-------|-------|
-| Technical Lead | [Name] | [Phone] | [Email] |
-| System Admin | [Name] | [Phone] | [Email] |
-| Clinic Manager | [Name] | [Phone] | [Email] |
-
----
-
-**Document Version**: 1.0  
-**Last Updated**: September 19, 2025  
-**Next Review**: Before deployment
+Your Pharmacy Management System is now live and ready for use. Remember to:
+- Keep regular backups
+- Monitor error logs
+- Update dependencies periodically
+- Test all features after any changes
