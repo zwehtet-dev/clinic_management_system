@@ -1,39 +1,31 @@
-# Redirect to public folder if accessing root
+# Disable directory listing
+Options -Indexes
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # Redirect to public folder
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ /public/$1 [L]
-    
-    # Handle the case where public folder is accessed directly
-    RewriteCond %{REQUEST_URI} ^/public/(.*)$
-    RewriteRule ^public/(.*)$ /public/$1 [L]
+
+    # Allow favicon.ico
+    RewriteCond %{REQUEST_URI} ^/favicon\.ico$ [NC]
+    RewriteRule ^favicon\.ico$ public/favicon.ico [L]
+
+    # Serve favicon, robots.txt, and assets directly
+    RewriteCond %{REQUEST_URI} ^/(favicon\.ico|robots\.txt|css/|js/|images/|storage/)
+    RewriteRule ^ - [L]
+
+    # If the file or directory exists in public, serve it
+    RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Otherwise, route everything to public/index.php
+    RewriteRule ^(.*)$ public/index.php [L]
 </IfModule>
 
-# Security: Deny access to sensitive files
-<Files ".env">
-    Order allow,deny
-    Deny from all
-</Files>
+# Deny access to sensitive files
+<FilesMatch "(\.env|composer\.json|composer\.lock|package\.json|package-lock\.json|phpunit\.xml)">
+    Require all denied
+</FilesMatch>
 
-<Files "composer.json">
-    Order allow,deny
-    Deny from all
-</Files>
-
-<Files "composer.lock">
-    Order allow,deny
-    Deny from all
-</Files>
-
-<Files "package.json">
-    Order allow,deny
-    Deny from all
-</Files>
-
-# Deny access to storage and bootstrap cache from web
+# Deny access to storage and bootstrap/cache
 RedirectMatch 403 ^/storage/.*$
 RedirectMatch 403 ^/bootstrap/cache/.*$

@@ -24,6 +24,7 @@ class Drug extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'expire_alert' => 'integer'
     ];
 
     public function batches()

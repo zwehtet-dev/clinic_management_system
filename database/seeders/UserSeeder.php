@@ -13,38 +13,11 @@ class UserSeeder extends Seeder
         // Create admin user
         User::create([
             'name' => 'Admin User',
-            'email' => 'admin@t2i.com',
+            'email' => 'admin@t2i.online',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
 
-        // Create staff users
-        User::create([
-            'name' => 'Dr. Sarah Johnson',
-            'email' => 'sarah@clinic.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
 
-        User::create([
-            'name' => 'Nurse Mary Wilson',
-            'email' => 'mary@clinic.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
-
-        User::create([
-            'name' => 'Pharmacist John Smith',
-            'email' => 'john@clinic.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
-
-        User::create([
-            'name' => 'Receptionist Lisa Brown',
-            'email' => 'lisa@clinic.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
     }
 }
