@@ -28,17 +28,20 @@ class DrugBatchForm
                                 return Drug::active()
                                     ->where('name', 'like', "%{$search}%")
                                     ->orWhere('generic_name', 'like', "%{$search}%")
+                                    ->orWhere('public_id', 'like', "%{$search}%")
                                     ->limit(50)
                                     ->orderBy('name', 'asc')
                                     ->get()
-                                    ->mapWithKeys(fn ($drug) => [$drug->id => "{$drug->name} - {$drug->generic_name}"])
+                                    ->mapWithKeys(fn ($drug) => [$drug->id => "{$drug->public_id} - {$drug->name} ({$drug->generic_name})"])
                                     ->toArray();
                             })
                             ->required(),
                         TextInput::make('batch_number')
                             ->maxLength(100)
                             ->unique(ignoreRecord:true)
-                            ->required(),
+                            ->placeholder('Auto-generated if left empty')
+                            ->helperText('Leave empty to auto-generate batch number (e.g., BAT-1-000001)')
+                            ->dehydrated(fn ($state) => filled($state)),
                         TextInput::make('purchase_price')
                             ->numeric()
                             ->suffix(' Ks')
@@ -58,9 +61,8 @@ class DrugBatchForm
                         TextInput::make('quantity_available')
                             ->required()
                             ->numeric()
-                            ->dehydrated(true)
-                            ->default(0)
-                            ->disabled(fn (string $operation): bool => $operation === 'create'),
+                            ->default(0),
+
                         DatePicker::make('expiry_date')
                             ->required(),
                         DatePicker::make('received_date')

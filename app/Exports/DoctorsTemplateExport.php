@@ -8,37 +8,32 @@ use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class DrugsTemplateExport implements FromArray, WithHeadings, WithStyles
+class DoctorsTemplateExport implements FromArray, WithHeadings, WithStyles
 {
     use Exportable;
 
     public function array(): array
     {
         // Return sample data to help users understand the format
-        // Note: public_id will be auto-generated, so no need to include it in template
         return [
             [
-                'Paracetamol 500mg',
-                'PARA-500',
-                'Paracetamol',
-                'Tablet',
-                '500mg',
-                'mg',
-                10,
-                30,
-                'Pain reliever and fever reducer',
+                'DOC001',
+                'Dr. John Smith',
+                'Cardiology',
+                'LIC123456',
+                '+1234567890',
+                '123 Medical Street, City',
+                'Experienced cardiologist',
                 true
             ],
             [
-                'Amoxicillin 250mg',
-                'AMOX-250',
-                'Amoxicillin',
-                'Capsule',
-                '250mg',
-                'mg',
-                5,
-                30,
-                'Antibiotic for bacterial infections',
+                'DOC002',
+                'Dr. Jane Doe',
+                'Pediatrics',
+                'LIC789012',
+                '+0987654321',
+                '456 Health Avenue, City',
+                'Specialist in child healthcare',
                 true
             ]
         ];
@@ -47,15 +42,13 @@ class DrugsTemplateExport implements FromArray, WithHeadings, WithStyles
     public function headings(): array
     {
         return [
+            'public_id',
             'name',
-            'catelog',
-            'generic_name',
-            'drug_form',
-            'strength',
-            'unit',
-            'min_stock',
-            'expire_alert',
-            'description',
+            'specialization',
+            'license_number',
+            'phone',
+            'address',
+            'notes',
             'is_active'
         ];
     }

@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
 
         // Seed in correct order due to foreign key dependencies
         $this->call([
-            UserSeeder::class,
+            // UserSeeder::class,
             DrugFormSeeder::class,
             DoctorSeeder::class,
             PatientSeeder::class,

@@ -29,6 +29,17 @@ class DrugBatch extends Model
         'received_date' => 'date',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($drugBatch) {
+            if (empty($drugBatch->batch_number) && $drugBatch->drug_id) {
+                $drugBatch->batch_number = $drugBatch->generateBatchNumber($drugBatch->drug_id);
+            }
+        });
+    }
+
     public function drug()
     {
         return $this->belongsTo(Drug::class);
@@ -60,4 +71,26 @@ class DrugBatch extends Model
         }
         return false;
     }
+
+    public static function generateBatchNumber($drugId)
+    {
+        $prefix = "BAT-{$drugId}-";
+
+        // Get the latest batch for the given drug to determine next number
+        $lastBatch = self::where('drug_id', $drugId)
+            ->where('batch_number', 'like', $prefix . '%')
+            ->orderBy('batch_number', 'desc')
+            ->first();
+
+        if ($lastBatch) {
+            // Extract the number from the last batch number
+            $lastNumber = (int) substr($lastBatch->batch_number, strrpos($lastBatch->batch_number, '-') + 1);
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+
+        return $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+    }
+
 }

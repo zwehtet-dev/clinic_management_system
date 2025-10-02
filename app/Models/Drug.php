@@ -10,6 +10,7 @@ class Drug extends Model
     use HasFactory;
 
     protected $fillable = [
+        'public_id',
         'name',
         'catelog',
         'generic_name',
@@ -26,6 +27,17 @@ class Drug extends Model
         'is_active' => 'boolean',
         'expire_alert' => 'integer'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($drug) {
+            if (empty($drug->public_id)) {
+                $drug->public_id = self::generatePublicId();
+            }
+        });
+    }
 
     public function batches()
     {
@@ -57,5 +69,18 @@ class Drug extends Model
     public function drugForm()
     {
         return $this->belongsTo(DrugForm::class);
+    }
+
+    public static function generatePublicId(): string
+    {
+        $year = now()->format('Y');
+        $prefix = "DRU-{$year}-";
+
+        // Get the latest drug ID
+        $lastDrug = self::latest('id')->first();
+
+        $nextNumber = $lastDrug ? $lastDrug->id + 1 : 1;
+
+        return $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
     }
 }

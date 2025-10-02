@@ -39,6 +39,7 @@ class DrugResource extends Resource
     public static function getGlobalSearchResultDetails($record): array
     {
         return [
+            'Drug ID' => $record->public_id,
             'Generic Name' => $record->generic_name,
             'Catelog' => $record->catelog
         ];

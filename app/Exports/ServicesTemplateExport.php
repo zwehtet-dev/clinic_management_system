@@ -8,37 +8,30 @@ use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class DrugsTemplateExport implements FromArray, WithHeadings, WithStyles
+class ServicesTemplateExport implements FromArray, WithHeadings, WithStyles
 {
     use Exportable;
 
     public function array(): array
     {
         // Return sample data to help users understand the format
-        // Note: public_id will be auto-generated, so no need to include it in template
         return [
             [
-                'Paracetamol 500mg',
-                'PARA-500',
-                'Paracetamol',
-                'Tablet',
-                '500mg',
-                'mg',
-                10,
-                30,
-                'Pain reliever and fever reducer',
+                'General Consultation',
+                'Basic medical consultation and examination',
+                50.00,
                 true
             ],
             [
-                'Amoxicillin 250mg',
-                'AMOX-250',
-                'Amoxicillin',
-                'Capsule',
-                '250mg',
-                'mg',
-                5,
-                30,
-                'Antibiotic for bacterial infections',
+                'Blood Test',
+                'Complete blood count and analysis',
+                25.00,
+                true
+            ],
+            [
+                'X-Ray',
+                'Digital X-ray imaging service',
+                75.00,
                 true
             ]
         ];
@@ -48,14 +41,8 @@ class DrugsTemplateExport implements FromArray, WithHeadings, WithStyles
     {
         return [
             'name',
-            'catelog',
-            'generic_name',
-            'drug_form',
-            'strength',
-            'unit',
-            'min_stock',
-            'expire_alert',
             'description',
+            'price',
             'is_active'
         ];
     }
@@ -68,6 +55,7 @@ class DrugsTemplateExport implements FromArray, WithHeadings, WithStyles
             // Add some sample styling
             2 => ['fill' => ['fillType' => 'solid', 'color' => ['rgb' => 'F2F2F2']]],
             3 => ['fill' => ['fillType' => 'solid', 'color' => ['rgb' => 'F2F2F2']]],
+            4 => ['fill' => ['fillType' => 'solid', 'color' => ['rgb' => 'F2F2F2']]],
         ];
     }
 }

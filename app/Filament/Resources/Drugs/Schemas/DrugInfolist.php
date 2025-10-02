@@ -16,6 +16,12 @@ class DrugInfolist
             ->components([
                 Section::make('Drug Information')
                     ->schema([
+                        TextEntry::make('public_id')
+                            ->label('Drug ID')
+                            ->size('lg')
+                            ->weight('bold')
+                            ->copyable(),
+
                         TextEntry::make('name')
                             ->size('lg')
                             ->weight('bold'),

@@ -16,7 +16,7 @@ class InvoiceSeeder extends Seeder
     {
         // Create invoices for some visits
         $visits = Visit::where('status', 'completed')->take(50)->get();
-        
+
         foreach ($visits as $visit) {
             $invoice = Invoice::create([
                 'invoice_number' => Invoice::generateInvoiceNumber(),
@@ -66,11 +66,11 @@ class InvoiceSeeder extends Seeder
                     ->where('expiry_date', '>', now())
                     ->inRandomOrder()
                     ->first();
-                
+
                 if ($drugBatch) {
                     $quantity = rand(1, min(5, $drugBatch->quantity_available));
                     $lineTotal = $quantity * $drugBatch->sell_price;
-                    
+
                     InvoiceItem::create([
                         'invoice_id' => $invoice->id,
                         'itemable_type' => DrugBatch::class,
@@ -79,9 +79,9 @@ class InvoiceSeeder extends Seeder
                         'unit_price' => $drugBatch->sell_price,
                         'line_total' => $lineTotal,
                     ]);
-                    
+
                     $totalAmount += $lineTotal;
-                    
+
                     // Reduce stock
                     $drugBatch->quantity_available -= $quantity;
                     $drugBatch->save();
@@ -94,7 +94,7 @@ class InvoiceSeeder extends Seeder
 
         // Create invoices for drug sales
         $drugSales = DrugSale::take(30)->get();
-        
+
         foreach ($drugSales as $drugSale) {
             $invoice = Invoice::create([
                 'invoice_number' => Invoice::generateInvoiceNumber(),
@@ -114,11 +114,11 @@ class InvoiceSeeder extends Seeder
                     ->where('expiry_date', '>', now())
                     ->inRandomOrder()
                     ->first();
-                
+
                 if ($drugBatch) {
                     $quantity = rand(1, min(10, $drugBatch->quantity_available));
                     $lineTotal = $quantity * $drugBatch->sell_price;
-                    
+
                     InvoiceItem::create([
                         'invoice_id' => $invoice->id,
                         'itemable_type' => DrugBatch::class,
@@ -127,9 +127,9 @@ class InvoiceSeeder extends Seeder
                         'unit_price' => $drugBatch->sell_price,
                         'line_total' => $lineTotal,
                     ]);
-                    
+
                     $totalAmount += $lineTotal;
-                    
+
                     // Reduce stock
                     $drugBatch->quantity_available -= $quantity;
                     $drugBatch->save();
@@ -138,7 +138,7 @@ class InvoiceSeeder extends Seeder
 
             // Update invoice and drug sale totals
             $invoice->update(['total_amount' => $totalAmount]);
-            $drugSale->update(['total_amount' => $totalAmount]);
+            // $drugSale->update(['total_amount' => $totalAmount]);
         }
     }
 }

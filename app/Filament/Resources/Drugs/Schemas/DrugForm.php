@@ -21,10 +21,15 @@ class DrugForm
                 Section::make('Drug Information')
                     ->schema([
 
+                        TextInput::make('public_id')
+                            ->label('Drug ID')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->placeholder('Auto-generated on save')
+                            ->helperText('Unique drug ID will be generated automatically'),
+
                         TextInput::make('name')
                             ->required()
-                            ->unique(ignoreRecord:true)
-                            ->autofocus()
                             ->maxLength(255),
 
                         TextInput::make('catelog')

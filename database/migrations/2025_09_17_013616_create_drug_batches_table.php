@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('sell_price', 10, 2);
             $table->integer('quantity_received')->default(0);
             $table->integer('quantity_available')->default(0);
-            $table->date('expiry_date');
+            $table->date('expiry_date')->nullable();
             $table->date('received_date')->nullable();
             $table->timestamps();
             $table->index(['drug_id', 'expiry_date']);

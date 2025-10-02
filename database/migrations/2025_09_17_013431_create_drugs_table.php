@@ -13,12 +13,13 @@ return new class extends Migration
     {
         Schema::create('drugs', function (Blueprint $table) {
             $table->id();
+            $table->string('public_id')->unique();
             $table->string('name');
             $table->string('catelog')->nullable();
             $table->string('generic_name')->nullable();
             $table->foreignId('drug_form_id')->constrained('drug_forms'); // tablet, syrup, injection, etc.
-            $table->string('strength'); // 500mg, 10ml, etc.
-            $table->string('unit'); // pieces, ml, etc.
+            $table->string('strength')->nullable(); // 500mg, 10ml, etc.
+            $table->string('unit')->nullable(); // pieces, ml, etc.
             $table->integer('min_stock')->default(10);
             $table->integer('expire_alert')->default(30); // days / default 1 month
             $table->text('description')->nullable();

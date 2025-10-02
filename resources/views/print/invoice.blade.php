@@ -127,16 +127,33 @@
 
         <div class="separator"></div>
 
+        @php
+            $isVisitInvoice = $invoice->invoiceable_type === 'App\\Models\\Visit';
+            $isDrugSaleInvoice = $invoice->invoiceable_type === 'App\\Models\\DrugSale';
+        @endphp
+
         <div class="invoice-details">
-            <div><strong>INVOICE: {{ $invoice->invoice_number }}</strong></div>
+            <div><strong>
+                @if($isVisitInvoice)
+                    CONSULTATION INVOICE: {{ $invoice->invoice_number }}
+                @elseif($isDrugSaleInvoice)
+                    PHARMACY RECEIPT: {{ $invoice->invoice_number }}
+                @else
+                    INVOICE: {{ $invoice->invoice_number }}
+                @endif
+            </strong></div>
             <div>Date: {{ $invoice->invoice_date->format('M d, Y H:i') }}</div>
             @if($invoice->invoiceable && $invoice->invoiceable->patient)
                 <div>Patient: {{ $invoice->invoiceable->patient->name }}</div>
                 @if($invoice->invoiceable->patient->phone)
                     <div>Phone: {{ $invoice->invoiceable->patient->phone }}</div>
                 @endif
+            @elseif($isDrugSaleInvoice && $invoice->invoiceable->buyer_name)
+                <div>Customer: {{ $invoice->invoiceable->buyer_name }}</div>
+            @elseif($isDrugSaleInvoice)
+                <div>Customer: Walk-in Customer</div>
             @endif
-            @if($invoice->invoiceable_type === 'App\\Models\\Visit' && $invoice->invoiceable->doctor)
+            @if($isVisitInvoice && $invoice->invoiceable->doctor)
                 <div>Doctor: Dr. {{ $invoice->invoiceable->doctor->name }}</div>
                 <div>Visit: {{ $invoice->invoiceable->public_id }}</div>
             @endif
@@ -149,12 +166,14 @@
                 $itemCount = $invoice->invoiceItems->count();
                 $maxDetailedItems = \App\Models\Setting::get('receipt_max_items', 15);
             @endphp
+
+            {{-- Consultation is now included as a service item --}}
             
             @if($itemCount <= $maxDetailedItems)
                 {{-- Show all items in detail if 12 or fewer --}}
                 @foreach($invoice->invoiceItems as $item)
                     <div class="item">
-                        <div>{{ \Str::limit($item->itemable->name ?? 'Unknown Item', 28) }}</div>
+                        <div>{{ \Str::limit($item->itemable_type === 'App\\Models\\DrugBatch' ? ($item->itemable->drug->name ?? 'Unknown Drug') : ($item->itemable->name ?? 'Unknown Item'), 28) }}</div>
                         <div class="item-line">
                             <span>{{ $item->quantity }} x {{ number_format($item->unit_price, 2) }}</span>
                             <span>{{ number_format($item->line_total, 2) }}</span>
@@ -165,7 +184,7 @@
                 {{-- Show first 8 items in detail --}}
                 @foreach($invoice->invoiceItems->take(8) as $item)
                     <div class="item">
-                        <div>{{ \Str::limit($item->itemable->name ?? 'Unknown Item', 28) }}</div>
+                        <div>{{ \Str::limit($item->itemable_type === 'App\\Models\\DrugBatch' ? ($item->itemable->drug->name ?? 'Unknown Drug') : ($item->itemable->name ?? 'Unknown Item'), 28) }}</div>
                         <div class="item-line">
                             <span>{{ $item->quantity }} x {{ number_format($item->unit_price, 2) }}</span>
                             <span>{{ number_format($item->line_total, 2) }}</span>
@@ -180,7 +199,7 @@
                 {{-- Show remaining items in compact format --}}
                 @foreach($invoice->invoiceItems->skip(8) as $item)
                     <div class="item-compact">
-                        <span class="name">{{ \Str::limit($item->itemable->name ?? 'Unknown', 18) }}</span>
+                        <span class="name">{{ \Str::limit($item->itemable_type === 'App\\Models\\DrugBatch' ? ($item->itemable->drug->name ?? 'Unknown Drug') : ($item->itemable->name ?? 'Unknown'), 18) }}</span>
                         <span>{{ $item->quantity }}x {{ number_format($item->line_total, 0) }}</span>
                     </div>
                 @endforeach

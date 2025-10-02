@@ -31,6 +31,12 @@ class DrugsTable
     {
         return $table
             ->columns([
+                TextColumn::make('public_id')
+                    ->label('Drug ID')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('medium')
+                    ->copyable(),
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable()

@@ -19,6 +19,11 @@ class DrugBatchesTable
     {
         return $table
             ->columns([
+                TextColumn::make('drug.public_id')
+                    ->label('Drug ID')
+                    ->searchable()
+                    ->sortable()
+                    ->copyable(),
                 TextColumn::make('drug.name')
                     ->searchable()
                     ->sortable(),

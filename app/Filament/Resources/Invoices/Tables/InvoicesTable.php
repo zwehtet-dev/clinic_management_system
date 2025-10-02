@@ -103,55 +103,55 @@ class InvoicesTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                Action::make('print')
-                    ->label('Print')
-                    ->icon('heroicon-o-printer')
-                    ->color('primary')
-                    ->action(function (Invoice $record) {
-                        // Dispatch print job
-                        PrintInvoiceJob::dispatch($record);
+                // Action::make('print')
+                //     ->label('Print')
+                //     ->icon('heroicon-o-printer')
+                //     ->color('primary')
+                //     ->action(function (Invoice $record) {
+                //         // Dispatch print job
+                //         PrintInvoiceJob::dispatch($record);
 
-                        Notification::make()
-                            ->title('Print Queued')
-                            ->success()
-                            ->body("Invoice {$record->invoice_number} has been queued for printing")
-                            ->send();
-                    })
-                    ->requiresConfirmation()
-                    ->modalHeading('Print Invoice')
-                    ->modalDescription('This will send the invoice to your configured printer.')
-                    ->modalSubmitActionLabel('Print Now'),
-                Action::make('print_options')
-                    ->label('Print Options')
-                    ->icon('heroicon-o-cog-6-tooth')
-                    ->color('gray')
-                    ->form([
-                        Select::make('printer_type')
-                            ->label('Printer Type')
-                            ->options([
-                                'thermal' => 'Thermal Receipt Printer',
-                                'regular' => 'Regular Printer (A4)',
-                                'network' => 'Network Printer',
-                            ])
-                            ->default(config('printing.default_printer_type'))
-                            ->required(),
+                //         Notification::make()
+                //             ->title('Print Queued')
+                //             ->success()
+                //             ->body("Invoice {$record->invoice_number} has been queued for printing")
+                //             ->send();
+                //     })
+                //     ->requiresConfirmation()
+                //     ->modalHeading('Print Invoice')
+                //     ->modalDescription('This will send the invoice to your configured printer.')
+                //     ->modalSubmitActionLabel('Print Now'),
+                // Action::make('print_options')
+                //     ->label('Print Options')
+                //     ->icon('heroicon-o-cog-6-tooth')
+                //     ->color('gray')
+                //     ->form([
+                //         Select::make('printer_type')
+                //             ->label('Printer Type')
+                //             ->options([
+                //                 'thermal' => 'Thermal Receipt Printer',
+                //                 'regular' => 'Regular Printer (A4)',
+                //                 'network' => 'Network Printer',
+                //             ])
+                //             ->default(config('printing.default_printer_type'))
+                //             ->required(),
 
-                        TextInput::make('copies')
-                            ->label('Number of Copies')
-                            ->numeric()
-                            ->default(1)
-                            ->minValue(1)
-                            ->maxValue(5),
-                    ])
-                    ->action(function (Invoice $record, array $data) {
-                        PrintInvoiceJob::dispatch($record, $data);
+                //         TextInput::make('copies')
+                //             ->label('Number of Copies')
+                //             ->numeric()
+                //             ->default(1)
+                //             ->minValue(1)
+                //             ->maxValue(5),
+                //     ])
+                //     ->action(function (Invoice $record, array $data) {
+                //         PrintInvoiceJob::dispatch($record, $data);
 
-                        Notification::make()
-                            ->title('Print Queued')
-                            ->success()
-                            ->body("Invoice {$record->invoice_number} queued for {$data['printer_type']} printer ({$data['copies']} copies)")
-                            ->send();
-                    })
+                //         Notification::make()
+                //             ->title('Print Queued')
+                //             ->success()
+                //             ->body("Invoice {$record->invoice_number} queued for {$data['printer_type']} printer ({$data['copies']} copies)")
+                //             ->send();
+                //     })
             ])
 
             ->toolbarActions([

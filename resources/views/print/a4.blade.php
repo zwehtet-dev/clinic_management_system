@@ -256,11 +256,25 @@
             </div>
         </div>
 
-        @if($invoice->invoiceable && $invoice->invoiceable->patient)
+        @php
+            $isVisitInvoice = $invoice->invoiceable_type === 'App\\Models\\Visit';
+            $isDrugSaleInvoice = $invoice->invoiceable_type === 'App\\Models\\DrugSale';
+        @endphp
+
+        @if($invoice->invoiceable && ($invoice->invoiceable->patient || $isDrugSaleInvoice))
         <div class="patient-info">
-            <h3>Patient Information</h3>
+            <h3>
+                @if($isVisitInvoice)
+                    Medical Consultation Invoice
+                @elseif($isDrugSaleInvoice)
+                    Pharmacy Sale Invoice
+                @else
+                    Patient Information
+                @endif
+            </h3>
+            @if($invoice->invoiceable->patient)
             <div class="info-row">
-                <span class="info-label">Name:</span>
+                <span class="info-label">Patient:</span>
                 <span>{{ $invoice->invoiceable->patient->name }}</span>
             </div>
             @if($invoice->invoiceable->patient->phone)
@@ -269,15 +283,56 @@
                 <span>{{ $invoice->invoiceable->patient->phone }}</span>
             </div>
             @endif
-            @if($invoice->invoiceable_type === 'App\\Models\\Visit' && $invoice->invoiceable->doctor)
+            @if($invoice->invoiceable->patient->age)
+            <div class="info-row">
+                <span class="info-label">Age:</span>
+                <span>{{ $invoice->invoiceable->patient->age }} years</span>
+            </div>
+            @endif
+            @elseif($isDrugSaleInvoice && $invoice->invoiceable->buyer_name)
+            <div class="info-row">
+                <span class="info-label">Customer:</span>
+                <span>{{ $invoice->invoiceable->buyer_name }}</span>
+            </div>
+            @elseif($isDrugSaleInvoice)
+            <div class="info-row">
+                <span class="info-label">Customer:</span>
+                <span>Walk-in Customer</span>
+            </div>
+            @endif
+            @if($isVisitInvoice && $invoice->invoiceable->doctor)
             <div class="info-row">
                 <span class="info-label">Doctor:</span>
                 <span>Dr. {{ $invoice->invoiceable->doctor->name }}</span>
             </div>
             <div class="info-row">
+                <span class="info-label">Specialization:</span>
+                <span>{{ $invoice->invoiceable->doctor->specialization ?? 'General Practice' }}</span>
+            </div>
+            <div class="info-row">
                 <span class="info-label">Visit ID:</span>
                 <span>{{ $invoice->invoiceable->public_id }}</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">Visit Date:</span>
+                <span>{{ $invoice->invoiceable->visit_date->format('F d, Y \a\t H:i') }}</span>
+            </div>
+            @endif
+            @if($isDrugSaleInvoice)
+            <div class="info-row">
+                <span class="info-label">Sale ID:</span>
+                <span>{{ $invoice->invoiceable->public_id ?? 'DS-' . $invoice->invoiceable->id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Sale Date:</span>
+                <span>{{ ($invoice->invoiceable->sale_date ?? $invoice->invoiceable->created_at)->format('F d, Y \a\t H:i') }}</span>
+            </div>
+            @if($invoice->invoiceable->buyer_name && !$invoice->invoiceable->patient)
+            <div class="info-row">
+                <span class="info-label">Buyer:</span>
+                <span>{{ $invoice->invoiceable->buyer_name }}</span>
+            </div>
+            @endif
             @endif
         </div>
         @endif
@@ -291,16 +346,18 @@
                 return $item->itemable_type === 'App\\Models\\Service';
             });
             
+            // Consultation fee is now handled as a service item, no separate calculation needed
+            
             $itemsPerPage = 30; // Items per page for A4
             $totalItems = $invoice->invoiceItems->count();
             
             // Combine items with section headers
             $organizedItems = collect();
-            if($drugItems->count() > 0) {
-                $organizedItems = $organizedItems->merge($drugItems);
-            }
             if($serviceItems->count() > 0) {
                 $organizedItems = $organizedItems->merge($serviceItems);
+            }
+            if($drugItems->count() > 0) {
+                $organizedItems = $organizedItems->merge($drugItems);
             }
             
             $itemChunks = $organizedItems->chunk($itemsPerPage);
@@ -338,13 +395,15 @@
                         $itemNumber = ($chunkIndex * $itemsPerPage) + 1;
                     @endphp
                     
+                    {{-- Consultation is now included as a service item, no separate handling needed --}}
+
                     @foreach($itemChunk as $index => $item)
                         @php
                             $newSection = '';
                             if($item->itemable_type === 'App\\Models\\DrugBatch') {
-                                $newSection = 'MEDICINES & DRUGS';
+                                $newSection = $isVisitInvoice ? 'PRESCRIBED MEDICINES' : 'MEDICINES & DRUGS';
                             } elseif($item->itemable_type === 'App\\Models\\Service') {
-                                $newSection = 'MEDICAL SERVICES';
+                                $newSection = $isVisitInvoice ? 'ADDITIONAL SERVICES' : 'MEDICAL SERVICES';
                             }
                         @endphp
                         
@@ -352,9 +411,9 @@
                             <tr style="background: #e9ecef;">
                                 <td colspan="5" style="font-weight: bold; padding: 8px; font-size: 11px;">
                                     {{ $newSection }}
-                                    @if($newSection === 'MEDICINES & DRUGS')
+                                    @if($newSection === 'PRESCRIBED MEDICINES' || $newSection === 'MEDICINES & DRUGS')
                                         ({{ $drugItems->count() }} items)
-                                    @elseif($newSection === 'MEDICAL SERVICES')
+                                    @elseif($newSection === 'ADDITIONAL SERVICES' || $newSection === 'MEDICAL SERVICES')
                                         ({{ $serviceItems->count() }} items)
                                     @endif
                                 </td>
@@ -390,9 +449,15 @@
             @if($chunkIndex === 0)
                 <div class="items-summary">
                     <strong>Invoice Summary:</strong> 
-                    {{ $drugItems->count() }} Medicine(s) | 
-                    {{ $serviceItems->count() }} Service(s) | 
-                    <strong>Total {{ $totalItems }} Items</strong>
+                    @if($isVisitInvoice)
+                        {{ $drugItems->count() }} Prescribed Medicine(s) | 
+                        {{ $serviceItems->count() }} Medical Service(s) | 
+                        <strong>Total {{ $totalItems }} Items</strong>
+                    @else
+                        {{ $drugItems->count() }} Medicine(s) | 
+                        {{ $serviceItems->count() }} Service(s) | 
+                        <strong>Total {{ $totalItems }} Items</strong>
+                    @endif
                     @if($itemChunks->count() > 1)
                         | Continued on {{ $itemChunks->count() - 1 }} more page(s)
                     @endif
@@ -402,7 +467,7 @@
 
         <div class="total-section">
             <div class="total-row">
-                <span>Subtotal:</span>
+                <span>{{ $isVisitInvoice ? 'Services & Medicines:' : 'Subtotal:' }}</span>
                 <span>{{ \App\Models\Setting::get('currency_symbol', 'Ks') }} {{ number_format($invoice->invoiceItems->sum('line_total'), 2) }}</span>
             </div>
             @if(\App\Models\Setting::get('tax_rate', 0) > 0)
@@ -412,7 +477,7 @@
             </div>
             @endif
             <div class="total-row final">
-                <span>TOTAL:</span>
+                <span>TOTAL AMOUNT:</span>
                 <span>{{ \App\Models\Setting::get('currency_symbol', 'Ks') }} {{ number_format($invoice->total_amount, 2) }}</span>
             </div>
         </div>

@@ -186,19 +186,40 @@
             @endif
         </div>
 
+        @php
+            $isVisitInvoice = $invoice->invoiceable_type === 'App\\Models\\Visit';
+            $isDrugSaleInvoice = $invoice->invoiceable_type === 'App\\Models\\DrugSale';
+        @endphp
+
         <div class="invoice-details">
-            <div><strong>INVOICE: {{ $invoice->invoice_number }}</strong></div>
+            <div><strong>
+                @if($isVisitInvoice)
+                    CONSULTATION INVOICE
+                @elseif($isDrugSaleInvoice)
+                    PHARMACY RECEIPT
+                @else
+                    INVOICE
+                @endif
+                : {{ $invoice->invoice_number }}
+            </strong></div>
             <div>Date: {{ $invoice->invoice_date->format('d/m/Y H:i') }}</div>
             @if($invoice->invoiceable && $invoice->invoiceable->patient)
                 <div>Patient: {{ $invoice->invoiceable->patient->name }}</div>
                 @if($invoice->invoiceable->patient->phone)
                     <div>Phone: {{ $invoice->invoiceable->patient->phone }}</div>
                 @endif
+            @elseif($isDrugSaleInvoice && $invoice->invoiceable->buyer_name)
+                <div>Customer: {{ $invoice->invoiceable->buyer_name }}</div>
+            @elseif($isDrugSaleInvoice)
+                <div>Customer: Walk-in Customer</div>
             @endif
-            @if($invoice->invoiceable_type === 'App\\Models\\Visit' && $invoice->invoiceable->doctor)
+            @if($isVisitInvoice && $invoice->invoiceable->doctor)
                 <div>Doctor: Dr. {{ $invoice->invoiceable->doctor->name }}</div>
+                <div>Visit: {{ $invoice->invoiceable->public_id }}</div>
             @endif
-            <div style="font-size: 8px; margin-top: 2px;">Items: {{ $invoice->invoiceItems->count() }}</div>
+            <div style="font-size: 8px; margin-top: 2px;">
+                Items: {{ $invoice->invoiceItems->count() }}
+            </div>
         </div>
 
         <div class="separator"></div>
@@ -216,25 +237,15 @@
                 $totalItems = $invoice->invoiceItems->count();
                 $maxDetailedItems = \App\Models\Setting::get('thermal_max_items', 12);
             @endphp
+
+            {{-- Consultation is now included as a service item --}}
             
             @if($totalItems <= $maxDetailedItems)
                 {{-- Show all items grouped by type --}}
-                @if($drugItems->count() > 0)
-                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">MEDICINES ({{ $drugItems->count() }}):</div>
-                    @foreach($drugItems as $item)
-                        <div class="item">
-                            <div class="item-name">{{ \Str::limit($item->itemable->drug->name ?? $item->itemable->name ?? 'Unknown Drug', 20) }}</div>
-                            <div class="item-line">
-                                <span>{{ $item->quantity }} x {{ number_format($item->unit_price, 0) }}</span>
-                                <span>{{ number_format($item->line_total, 0) }}</span>
-                            </div>
-                        </div>
-                    @endforeach
-                @endif
-                
                 @if($serviceItems->count() > 0)
-                    @if($drugItems->count() > 0)<div class="separator"></div>@endif
-                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">SERVICES ({{ $serviceItems->count() }}):</div>
+                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">
+                        {{ $isVisitInvoice ? 'ADDITIONAL SERVICES' : 'SERVICES' }} ({{ $serviceItems->count() }}):
+                    </div>
                     @foreach($serviceItems as $item)
                         <div class="item">
                             <div class="item-name">{{ \Str::limit($item->itemable->name ?? 'Unknown Service', 20) }}</div>
@@ -245,10 +256,44 @@
                         </div>
                     @endforeach
                 @endif
+
+                @if($drugItems->count() > 0)
+                    @if($serviceItems->count() > 0)<div class="separator"></div>@endif
+                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">
+                        {{ $isVisitInvoice ? 'PRESCRIBED MEDICINES' : 'MEDICINES' }} ({{ $drugItems->count() }}):
+                    </div>
+                    @foreach($drugItems as $item)
+                        <div class="item">
+                            <div class="item-name">{{ \Str::limit($item->itemable->drug->name ?? $item->itemable->name ?? 'Unknown Drug', 20) }}</div>
+                            <div class="item-line">
+                                <span>{{ $item->quantity }} x {{ number_format($item->unit_price, 0) }}</span>
+                                <span>{{ number_format($item->line_total, 0) }}</span>
+                            </div>
+                            @if($item->itemable->batch_number)
+                                <div style="font-size: 7px; color: #666;">Batch: {{ $item->itemable->batch_number }}</div>
+                            @endif
+                        </div>
+                    @endforeach
+                @endif
             @else
                 {{-- Compact format for many items --}}
+                @if($serviceItems->count() > 0)
+                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">
+                        {{ $isVisitInvoice ? 'ADDITIONAL SERVICES' : 'SERVICES' }} ({{ $serviceItems->count() }}):
+                    </div>
+                    @foreach($serviceItems as $item)
+                        <div class="item-compact">
+                            <span class="name">{{ \Str::limit($item->itemable->name ?? 'Unknown', 14) }}</span>
+                            <span class="details">{{ $item->quantity }}x {{ number_format($item->line_total, 0) }}</span>
+                        </div>
+                    @endforeach
+                @endif
+
                 @if($drugItems->count() > 0)
-                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">MEDICINES ({{ $drugItems->count() }}):</div>
+                    @if($serviceItems->count() > 0)<div class="separator"></div>@endif
+                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">
+                        {{ $isVisitInvoice ? 'PRESCRIBED MEDICINES' : 'MEDICINES' }} ({{ $drugItems->count() }}):
+                    </div>
                     @foreach($drugItems->take(8) as $item)
                         <div class="item-compact">
                             <span class="name">{{ \Str::limit($item->itemable->drug->name ?? $item->itemable->name ?? 'Unknown', 14) }}</span>
@@ -264,17 +309,6 @@
                             </div>
                         @endforeach
                     @endif
-                @endif
-                
-                @if($serviceItems->count() > 0)
-                    <div class="separator"></div>
-                    <div style="font-weight: bold; font-size: 9px; margin: 3px 0;">SERVICES ({{ $serviceItems->count() }}):</div>
-                    @foreach($serviceItems as $item)
-                        <div class="item-compact">
-                            <span class="name">{{ \Str::limit($item->itemable->name ?? 'Unknown', 14) }}</span>
-                            <span class="details">{{ $item->quantity }}x {{ number_format($item->line_total, 0) }}</span>
-                        </div>
-                    @endforeach
                 @endif
             @endif
         </div>

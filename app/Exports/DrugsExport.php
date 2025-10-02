@@ -26,6 +26,7 @@ class DrugsExport implements FromCollection, WithHeadings, WithMapping, WithStyl
     {
         return [
             'ID',
+            'Drug ID',
             'Name',
             'Catelog',
             'Generic Name',
@@ -46,6 +47,7 @@ class DrugsExport implements FromCollection, WithHeadings, WithMapping, WithStyl
     {
         return [
             $drug->id,
+            $drug->public_id,
             $drug->name,
             $drug->catelog,
             $drug->generic_name,

@@ -16,22 +16,21 @@ class DrugSaleSeeder extends Seeder
         // Create drug sales for the past 2 months
         for ($i = 0; $i < 80; $i++) {
             $saleDate = Carbon::now()->subDays(rand(1, 60));
-            
+
             // 70% chance of having a patient, 30% walk-in
             $hasPatient = rand(1, 10) <= 7;
-            
+
             DrugSale::create([
                 'public_id' => DrugSale::generatePublicId(),
                 'patient_id' => $hasPatient ? $patients->random()->id : null,
                 'buyer_name' => $hasPatient ? null : $this->getRandomBuyerName(),
-                'sale_date' => $saleDate,
-                'total_amount' => rand(5000, 50000), // Will be updated when invoices are created
+                'sale_date' => $saleDate
             ]);
         }
 
         // Create some specific test scenarios
         $testPatient = Patient::where('name', 'Ma Thida')->first();
-        
+
         if ($testPatient) {
             // Recent sale with patient
             DrugSale::create([
@@ -39,7 +38,6 @@ class DrugSaleSeeder extends Seeder
                 'patient_id' => $testPatient->id,
                 'buyer_name' => null,
                 'sale_date' => Carbon::now()->subDays(3),
-                'total_amount' => 25000,
             ]);
         }
 
@@ -49,7 +47,6 @@ class DrugSaleSeeder extends Seeder
             'patient_id' => null,
             'buyer_name' => 'Ko Thura',
             'sale_date' => Carbon::now()->subDays(1),
-            'total_amount' => 15000,
         ]);
 
         DrugSale::create([
@@ -57,7 +54,6 @@ class DrugSaleSeeder extends Seeder
             'patient_id' => null,
             'buyer_name' => 'Ma Sandar',
             'sale_date' => Carbon::today(),
-            'total_amount' => 8000,
         ]);
 
         // Today's sales for testing
@@ -67,7 +63,6 @@ class DrugSaleSeeder extends Seeder
                 'patient_id' => rand(1, 2) === 1 ? $patients->random()->id : null,
                 'buyer_name' => rand(1, 2) === 1 ? null : $this->getRandomBuyerName(),
                 'sale_date' => Carbon::today(),
-                'total_amount' => rand(3000, 30000),
             ]);
         }
     }

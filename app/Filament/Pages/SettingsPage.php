@@ -9,12 +9,17 @@ use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Schemas\Schema;
 use App\Services\PrinterService;
+use App\Exports\DrugsTemplateExport;
+use Filament\Support\Icons\Heroicon;
+use Maatwebsite\Excel\Facades\Excel;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Tabs;
 use Illuminate\Support\Facades\Cache;
+use App\Exports\DoctorsTemplateExport;
 use Filament\Forms\Contracts\HasForms;
+use App\Exports\ServicesTemplateExport;
 use Filament\Forms\Components\Textarea;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +28,8 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Tabs\Tab;
+use App\Exports\DrugBatchesTemplateExport;
+use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Concerns\InteractsWithForms;
 
@@ -179,6 +186,67 @@ class SettingsPage extends Page implements HasForms
                                             ->helperText('Maximum items to show in detail on standard receipts'),
                                     ])
                                     ->columns(2),
+                            ]),
+
+                        Tab::make('Import Templates')
+                            ->icon('heroicon-o-document-arrow-down')
+                            ->schema([
+                                Section::make('Download Import Templates')
+                                    ->description('Download Excel templates for importing data into the system')
+                                    ->schema([
+                                        Placeholder::make('drugs_template')
+                                            ->label('Drugs Template')
+                                            ->content('Download the Excel template for importing drugs with all required fields and sample data.')
+                                            ->suffixAction(
+                                                Action::make('download_drugs_template')
+                                                    ->label('Download')
+                                                    ->icon('heroicon-o-document-arrow-down')
+                                                    ->color('primary')
+                                                    ->action(function () {
+                                                        return Excel::download(new DrugsTemplateExport, 'drugs_template.xlsx');
+                                                    })
+                                            ),
+
+                                        Placeholder::make('drug_batches_template')
+                                            ->label('Drug Batches Template')
+                                            ->content('Download the Excel template for importing drug batches with batch numbers, prices, and quantities.')
+                                            ->suffixAction(
+                                                Action::make('download_drug_batches_template')
+                                                    ->label('Download')
+                                                    ->icon('heroicon-o-document-arrow-down')
+                                                    ->color('primary')
+                                                    ->action(function () {
+                                                        return Excel::download(new DrugBatchesTemplateExport, 'drug_batches_template.xlsx');
+                                                    })
+                                            ),
+
+                                        Placeholder::make('doctors_template')
+                                            ->label('Doctors Template')
+                                            ->content('Download the Excel template for importing doctors with their specializations and contact information.')
+                                            ->suffixAction(
+                                                Action::make('download_doctors_template')
+                                                    ->label('Download')
+                                                    ->icon('heroicon-o-document-arrow-down')
+                                                    ->color('primary')
+                                                    ->action(function () {
+                                                        return Excel::download(new DoctorsTemplateExport, 'doctors_template.xlsx');
+                                                    })
+                                            ),
+
+                                        Placeholder::make('services_template')
+                                            ->label('Services Template')
+                                            ->content('Download the Excel template for importing services with names, descriptions, and prices.')
+                                            ->suffixAction(
+                                                Action::make('download_services_template')
+                                                    ->label('Download')
+                                                    ->icon('heroicon-o-document-arrow-down')
+                                                    ->color('primary')
+                                                    ->action(function () {
+                                                        return Excel::download(new ServicesTemplateExport, 'services_template.xlsx');
+                                                    })
+                                            ),
+                                    ])
+                                    ->columns(1),
                             ]),
                     ])
                     ->columnSpanFull(),

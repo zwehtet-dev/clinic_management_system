@@ -8,7 +8,9 @@ use App\Models\Invoice;
 use App\Models\Service;
 use App\Models\DrugSale;
 use App\Models\DrugBatch;
+use Filament\Actions\Action;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Log;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -18,6 +20,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Support\Icons\Heroicon;
 
 class InvoiceForm
 {
@@ -49,15 +52,15 @@ class InvoiceForm
                                 if(request()->exists('drug_sale_id')){
                                     return DrugSale::class;
                                 }
-                                return Visit::class; // Default to visit
+                                return Visit::class;
                             })
                             ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set) {
-                                // Clear all data when type changes
                                 $set('invoiceable_id', null);
                                 $set('drug_items', []);
                                 $set('selected_services', []);
+                                $set('consultation_fee', 0);
                                 $set('total_amount', 0);
                             }),
 
@@ -121,28 +124,13 @@ class InvoiceForm
 
                                 $type = $get('invoiceable_type');
                                 if($type === Visit::class){
-                                    $visit = Visit::find($state);
+                                    $visit = Visit::with('doctor')->find($state);
                                     if($visit) {
-                                        // Auto-set consultation fee in total
-                                        $set('total_amount', $visit->consultation_fee);
-                                    }
-                                } elseif($type === DrugSale::class) {
-                                    $drugSale = DrugSale::find($state);
-                                    if($drugSale) {
-                                        // Auto-populate drug items from drug sale
-                                        // $drugItems = [];
-                                        // foreach($drugSale->drugSaleItems as $saleItem) {
-                                        //     $drugItems[] = [
-                                        //         'itemable_type' => DrugBatch::class,
-                                        //         'itemable_id' => $saleItem->batch_id ?? $saleItem->drug_id,
-                                        //         'quantity' => $saleItem->quantity,
-                                        //         'unit_price' => $saleItem->unit_price,
-                                        //         'line_total' => $saleItem->line_total,
-                                        //     ];
-                                        // }
-
-                                        // $set('drug_items', $drugItems);
-                                        // $set('total_amount', $drugSale->total_amount);
+                                        // Set consultation fee from visit
+                                        $set('consultation_fee', $visit->consultation_fee ?? 0);
+                                        // Auto-add consultation service for visit invoices
+                                        self::updateConsultationService($set, $get, floatval($visit->consultation_fee ?? 0));
+                                        self::updateInvoiceTotal($set, $get);
                                     }
                                 }
                             }),
@@ -162,37 +150,23 @@ class InvoiceForm
                             ->numeric()
                             ->suffix(' Ks')
                             ->disabled()
-                            ->default(function(){
-                                if(request()->exists('visit_id'))
-                                {
-                                    $visit = Visit::find(request()->get('visit_id'));
-                                    if($visit) {
-                                        return $visit->consultation_fee;
-                                    }
-
-                                }
-                                return 0;
-                            })
+                            ->default(0)
                             ->dehydrated(),
                     ])
                     ->columns(3)
                     ->columnSpanFull(),
 
-                // Drug Items Section (Visible for all types)
                 Section::make('Drugs/Medicines')
                     ->schema([
                         Repeater::make('drug_items')
                             ->label('Drug Items')
                             ->schema([
-
-                                // Combined search for drugs by name or batch number
                                 Select::make('itemable_search')
                                     ->label('Search Drug/Batch')
                                     ->searchable()
                                     ->preload(false)
                                     ->getSearchResultsUsing(function (string $search) {
-                                        // Search drug batches by batch number, drug name, or generic name
-                                        return DrugBatch::with('drug')
+                                        return DrugBatch::with('drug.drugForm')
                                             ->where('quantity_available', '>', 0)
                                             ->where('expiry_date', '>', now())
                                             ->where(function ($query) use ($search) {
@@ -206,18 +180,21 @@ class InvoiceForm
                                             ->orderBy('expiry_date')
                                             ->get()
                                             ->mapWithKeys(function ($batch) {
+                                                $formName = $batch->drug->drugForm->name ?? 'N/A';
                                                 return [
-                                                    $batch->id => "#{$batch->batch_number} - {$batch->drug->name} ({$batch->drug->drugForm->name}) (Stock: {$batch->quantity_available}) - Exp: {$batch->expiry_date->format('M d, Y')}"
+                                                    $batch->id => "#{$batch->batch_number} - {$batch->drug->public_id} - {$batch->drug->name} - {$batch->drug->catelog} - {$batch->drug->generic_name} ({$formName}) (Stock: {$batch->quantity_available}) - Exp: {$batch->expiry_date->format('M d, Y')}"
                                                 ];
                                             })
                                             ->toArray();
                                     })
                                     ->getOptionLabelUsing(function ($value) {
-                                        $batch = DrugBatch::with('drug')->find($value);
-                                        return $batch ? "#{$batch->batch_number} - {$batch->drug->name} ({$batch->drug->drugForm->name}) (Stock: {$batch->quantity_available}) - Exp: {$batch->expiry_date->format('M d, Y')}" : null;
+                                        $batch = DrugBatch::with('drug.drugForm')->find($value);
+                                        if (!$batch) return null;
+                                        $formName = $batch->drug->drugForm->name ?? 'N/A';
+                                        return "#{$batch->batch_number} - {$batch->drug->public_id} - {$batch->drug->name} - {$batch->drug->catelog} - {$batch->drug->generic_name} ({$formName}) (Stock: {$batch->quantity_available}) - Exp: {$batch->expiry_date->format('M d, Y')}";
                                     })
                                     ->required()
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->dehydrated(false)
                                     ->columnSpanFull()
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
@@ -229,52 +206,59 @@ class InvoiceForm
                                             return;
                                         }
 
-                                        $batch = DrugBatch::find($state);
+                                        $batch = DrugBatch::with('drug')->find($state);
                                         if ($batch) {
-                                            $set('itemable_id', $batch->id ?? null);
-                                            $set('batch_number', $batch->batch_number ?? null);
-                                            $set('unit_price', $batch->sell_price ?? $batch->drug->price);
-                                            $quantity = floatval($get('quantity') ?: 1);
-                                            $set('line_total', ($batch->sell_price ?? $batch->drug->price) * $quantity);
-                                        }
+                                            $set('itemable_id', $batch->id);
+                                            $set('batch_number', $batch->batch_number);
 
-                                        // Update invoice total
-                                        self::updateInvoiceTotal($set, $get);
+                                            $unitPrice = floatval($batch->sell_price ?? $batch->drug->price ?? 0);
+                                            $set('unit_price', $unitPrice);
+
+                                            $quantity = floatval($get('quantity') ?: 1);
+                                            $lineTotal = round($unitPrice * $quantity, 2);
+                                            $set('line_total', $lineTotal);
+
+                                            // Delay total update to ensure all fields are set
+                                            self::updateInvoiceTotal($set, $get);
+                                        }
                                     }),
 
-                                // Hidden fields for proper storage
                                 TextInput::make('itemable_id')
                                     ->hidden()
-                                    ->dehydrated(),
+                                    ->dehydrated()
+                                    ->required(),
 
                                 TextInput::make('batch_number')
-                                    // ->hidden()
                                     ->label('Batch Number')
-                                    ->live()
-                                    ->default(null)
+                                    ->disabled()
                                     ->dehydrated(),
-
 
                                 TextInput::make('quantity')
                                     ->numeric()
                                     ->default(1)
                                     ->required()
                                     ->minValue(1)
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
                                         $unitPrice = floatval($get('unit_price') ?? 0);
-                                        $quantity = floatval($state ?? 1);
-                                        $set('line_total', $unitPrice * $quantity);
+                                        $quantity = floatval($state ?? 0);
 
-                                        // Update invoice total
+                                        if ($quantity <= 0) {
+                                            $set('quantity', 1);
+                                            $quantity = 1;
+                                        }
+
+                                        $lineTotal = round($unitPrice * $quantity, 2);
+                                        $set('line_total', $lineTotal);
+
                                         self::updateInvoiceTotal($set, $get);
                                     })
                                     ->maxValue(function(Get $get) {
                                         if ($get('itemable_id')) {
                                             $batch = DrugBatch::find($get('itemable_id'));
-                                            return $batch ? $batch->quantity_available : 999;
+                                            return $batch ? $batch->quantity_available : 9999;
                                         }
-                                        return 999;
+                                        return 9999;
                                     })
                                     ->helperText(function(Get $get) {
                                         if ($get('itemable_id')) {
@@ -294,13 +278,20 @@ class InvoiceForm
                                     ->numeric()
                                     ->suffix('Ks')
                                     ->required()
-                                    ->live()
+                                    ->minValue(0)
+                                    ->live(onBlur: true)
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
                                         $unitPrice = floatval($state ?? 0);
                                         $quantity = floatval($get('quantity') ?? 1);
-                                        $set('line_total', $unitPrice * $quantity);
 
-                                        // Update invoice total
+                                        if ($unitPrice < 0) {
+                                            $set('unit_price', 0);
+                                            $unitPrice = 0;
+                                        }
+
+                                        $lineTotal = round($unitPrice * $quantity, 2);
+                                        $set('line_total', $lineTotal);
+
                                         self::updateInvoiceTotal($set, $get);
                                     }),
 
@@ -316,19 +307,44 @@ class InvoiceForm
                             ->cloneable()
                             ->addActionLabel('Add Drug')
                             ->columnSpanFull()
-                            ->live()
+                            ->live(onBlur: true)
                             ->dehydrated()
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 self::updateInvoiceTotal($set, $get);
-                            }),
+                            })
+                            ->deleteAction(
+                                fn ($action) => $action->after(fn (Set $set, Get $get) => self::updateInvoiceTotal($set, $get))
+                            ),
                     ])
                     ->columnSpanFull(),
 
-                // Services Section (Only visible for Visit invoices)
                 Section::make('Medical Services')
+                    ->description('Edit consultation fee below. Consultation service will be auto-selected. You can also select additional services.')
                     ->schema([
+                        TextInput::make('consultation_fee')
+                            ->label('Consultation Fee')
+                            ->numeric()
+                            ->suffix(' Ks')
+                            ->default(function (Get $get) {
+                                if ($get('invoiceable_type') === Visit::class && $get('invoiceable_id')) {
+                                    $visit = Visit::find($get('invoiceable_id'));
+                                    return $visit ? $visit->consultation_fee : 0;
+                                }
+                                return 0;
+                            })
+                            ->minValue(0)
+                            ->live(onBlur: true)
+                            ->dehydrated(false) // Don't save this field directly, it's handled via service items
+                            ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                // Update consultation service with new fee
+                                self::updateConsultationService($set, $get, floatval($state ?? 0));
+                                self::updateInvoiceTotal($set, $get);
+                            })
+                            ->helperText('Edit the consultation fee if needed. This will be added as a service item.')
+                            ->columnSpan(1),
+
                         CheckboxList::make('selected_services')
-                            ->label('Select Services')
+                            ->label('All Medical Services')
                             ->options(function () {
                                 return Service::where('is_active', true)
                                     ->orderBy('name')
@@ -339,11 +355,14 @@ class InvoiceForm
                                     ->toArray();
                             })
                             ->columns(3)
-                            ->live()
+                            ->live(onBlur: true)
                             ->afterStateUpdated(function (Set $set, Get $get, $state) {
                                 self::updateInvoiceTotal($set, $get);
-                            }),
+                            })
+                            ->helperText('Consultation service is automatically managed based on the consultation fee above.')
+                            ->columnSpan(2),
                     ])
+                    ->columns(3)
                     ->visible(fn (Get $get) => $get('invoiceable_type') === Visit::class)
                     ->columnSpanFull(),
 
@@ -353,6 +372,14 @@ class InvoiceForm
                             ->rows(4)
                             ->placeholder('Additional notes for the invoice...')
                             ->columnSpanFull(),
+                        Action::make('Recalculate Total')
+                            ->label('Recalculate Total')
+                            ->color('primary')
+                            ->action(function (Set $set, Get $get) {
+                                InvoiceForm::updateInvoiceTotal($set, $get);
+                            })
+                            ->icon(Heroicon::OutlinedCalculator),
+
                     ])
                     ->columns(1)
                     ->columnSpanFull(),
@@ -360,37 +387,85 @@ class InvoiceForm
     }
 
     /**
-     * Helper method to update invoice total
+     * Update consultation service with dynamic fee
+     */
+    private static function updateConsultationService(Set $set, Get $get, float $consultationFee): void
+    {
+        $selectedServices = $get('selected_services') ?? [];
+        
+        // Find or create a consultation service
+        $consultationService = Service::firstOrCreate(
+            ['name' => 'Medical Consultation'],
+            [
+                'description' => 'Medical consultation fee',
+                'price' => $consultationFee,
+                'is_active' => true,
+                'category' => 'Consultation'
+            ]
+        );
+
+        if ($consultationFee > 0) {
+            // Update the service price to match the current consultation fee
+            if ($consultationService->price != $consultationFee) {
+                $consultationService->update(['price' => $consultationFee]);
+            }
+
+            // Auto-select the consultation service if not already selected
+            if (!in_array($consultationService->id, $selectedServices)) {
+                $selectedServices[] = $consultationService->id;
+                $set('selected_services', $selectedServices);
+            }
+        } else {
+            // Remove consultation service if fee is 0
+            $selectedServices = array_filter($selectedServices, function($serviceId) use ($consultationService) {
+                return $serviceId != $consultationService->id;
+            });
+            $set('selected_services', array_values($selectedServices));
+        }
+    }
+
+    /**
+     * CRITICAL: Safe invoice total calculation
+     * This method ensures accurate financial calculations
      */
     private static function updateInvoiceTotal(Set $set, Get $get): void
     {
-        // Get consultation fee if it's a visit invoice
-        $consultationFee = 0;
-        $type = $get('invoiceable_type');
-        if ($type === Visit::class && $get('invoiceable_id')) {
-            $visit = Visit::find($get('invoiceable_id'));
-            if ($visit) {
-                $consultationFee = $visit->consultation_fee;
-            }
-        }
+        try {
+            // Initialize total
+            $totalAmount = 0;
 
-        // Calculate drug items total
-        $drugItems = $get('drug_items') ?? [];
-        $drugTotal = collect($drugItems)->sum('line_total');
-
-        // Calculate services total (only for visit invoices)
-        $servicesTotal = 0;
-        if ($type === Visit::class) {
-            $selectedServices = $get('selected_services') ?? [];
-            foreach ($selectedServices as $serviceId) {
-                $service = Service::find($serviceId);
-                if ($service) {
-                    $servicesTotal += $service->price;
+            // 1. Calculate drug items total
+            $drugItems = $get('drug_items') ?? [];
+            if (is_array($drugItems) && !empty($drugItems)) {
+                foreach ($drugItems as $item) {
+                    if (isset($item['line_total']) && is_numeric($item['line_total'])) {
+                        $totalAmount += floatval($item['line_total']);
+                    }
                 }
             }
-        }
 
-        $totalAmount = $consultationFee + $drugTotal + $servicesTotal;
-        $set('total_amount', $totalAmount);
+            // 2. Calculate services total (includes consultation for visit invoices)
+            $type = $get('invoiceable_type');
+            if ($type === Visit::class) {
+                $selectedServices = $get('selected_services') ?? [];
+                if (is_array($selectedServices) && !empty($selectedServices)) {
+                    foreach ($selectedServices as $serviceId) {
+                        $service = Service::find($serviceId);
+                        if ($service && $service->price) {
+                            $totalAmount += floatval($service->price);
+                        }
+                    }
+                }
+            }
+
+            // Round to 2 decimal places and set
+            $totalAmount = round($totalAmount, 2);
+            $set('total_amount', $totalAmount);
+
+        } catch (\Exception $e) {
+            // Log error but don't break the form
+            Log::error('Invoice total calculation error: ' . $e->getMessage());
+            $set('total_amount', 0);
+        }
     }
 }

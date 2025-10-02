@@ -21,14 +21,6 @@ class ListDrugs extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('downloadTemplate')
-                ->label('Download Template')
-                ->icon(Heroicon::OutlinedDocumentArrowDown)
-                ->color('info')
-                ->action(function () {
-                    return Excel::download(new DrugsTemplateExport, 'drugs_template.xlsx');
-                }),
-            
             Action::make('import')
                 ->label('Import Drugs')
                 ->icon(Heroicon::OutlinedDocumentArrowUp)
@@ -38,7 +30,7 @@ class ListDrugs extends ListRecords
                         ->label('Excel File')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
                         ->required()
-                        ->helperText('Upload an Excel file (.xlsx or .xls) with drug data. Download the template first to see the required format.')
+                        ->helperText('Upload an Excel file (.xlsx or .xls) with drug data. Download the template from Settings > Import Templates.')
                 ])
                 ->action(function (array $data) {
                     try {

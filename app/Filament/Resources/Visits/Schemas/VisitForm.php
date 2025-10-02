@@ -52,6 +52,21 @@ class VisitForm
                                     })
                                     ->toArray();
                             })
+                            ->default(function(){
+                                if(request()->exists('patient_id')){
+                                    return request()->get('patient_id');
+                                }
+                                return null;
+                            })
+                            ->getOptionLabelUsing(function ($value, Get $get) {
+                                $patient = Patient::find($value);
+                                if($patient){
+                                    return "{$patient->public_id} - {$patient->name}";
+                                }
+
+                                return '';
+
+                            })
                             ->required(),
                         Select::make('doctor_id')
                             ->label('Doctor')

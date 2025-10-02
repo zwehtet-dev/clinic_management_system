@@ -104,13 +104,15 @@ class PrintController extends Controller
                 'invoiceItems',
                 'invoiceItems.itemable',
                 'invoiceable',
-                'invoiceable.patient',
-                'invoiceable.doctor'
+                'invoiceable.patient'
             ])->find($printData['invoice_id']);
 
             if (!$invoice) {
                 abort(404, 'Invoice not found');
             }
+
+            // Validate and load relationships safely
+            $this->validateAndLoadInvoiceRelationships($invoice);
 
             // Safely load drug relationships for drug batches
             if ($invoice->invoiceItems) {
@@ -145,14 +147,61 @@ class PrintController extends Controller
         } catch (\Exception $e) {
             Log::error('Print error: ' . $e->getMessage(), [
                 'token' => $token,
+                'invoice_id' => $printData['invoice_id'] ?? 'unknown',
+                'format' => $printData['format'] ?? 'unknown',
                 'trace' => $e->getTraceAsString()
             ]);
 
             // Return a simple error page instead of aborting
             return response()->view('errors.print-error', [
                 'message' => 'Error loading print data: ' . $e->getMessage(),
-                'token' => $token
+                'token' => $token,
+                'details' => [
+                    'invoice_id' => $printData['invoice_id'] ?? 'unknown',
+                    'format' => $printData['format'] ?? 'unknown',
+                    'error_type' => get_class($e)
+                ]
             ], 500);
+        }
+    }
+
+    /**
+     * Validate invoice and load necessary relationships safely
+     */
+    private function validateAndLoadInvoiceRelationships(Invoice $invoice): void
+    {
+        // Validate basic invoice data
+        if (!$invoice->invoiceable) {
+            throw new \Exception('Invoice has no associated record (Visit or DrugSale)');
+        }
+
+        // Load relationships based on invoice type
+        switch ($invoice->invoiceable_type) {
+            case 'App\\Models\\Visit':
+                if (!$invoice->invoiceable->relationLoaded('doctor')) {
+                    try {
+                        $invoice->invoiceable->load('doctor');
+                    } catch (\Exception $e) {
+                        Log::warning("Could not load doctor for visit: " . $e->getMessage());
+                    }
+                }
+                break;
+                
+            case 'App\\Models\\DrugSale':
+                // DrugSale doesn't have doctor relationship, so we don't try to load it
+                break;
+                
+            default:
+                Log::warning("Unknown invoiceable type: {$invoice->invoiceable_type}");
+        }
+
+        // Load patient relationship if not already loaded
+        if (!$invoice->invoiceable->relationLoaded('patient')) {
+            try {
+                $invoice->invoiceable->load('patient');
+            } catch (\Exception $e) {
+                Log::warning("Could not load patient: " . $e->getMessage());
+            }
         }
     }
 
